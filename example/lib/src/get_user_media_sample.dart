@@ -124,7 +124,7 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
         .getVideoTracks()
         .firstWhere((track) => track.kind == 'video');
     final has = await videoTrack.hasTorch();
-    if (has) {
+    if (has ?? false) {
       print('[TORCH] Current camera supports torch mode');
       setState(() => _isTorchOn = !_isTorchOn);
       await videoTrack.setTorch(_isTorchOn);

@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter_webrtc/src/interface/multi_party_recorder.dart';
+
 import '../interface/media_recorder.dart';
 import '../interface/media_stream.dart';
 import '../interface/navigator.dart';
@@ -20,6 +22,21 @@ Future<MediaStream> createLocalMediaStream(String label) async {
 
 MediaRecorder mediaRecorder() {
   return RTCFactoryNative.instance.mediaRecorder();
+}
+
+MultiPartyRecorder multiPartyRecorder({
+  int fps = 24,
+  bool audioOnly = false,
+  MediaFormat format = MediaFormat.mpeg4,
+  MultiPartyRecorderType type = MultiPartyRecorderType.local,
+  videoSize,
+}) {
+  return RTCFactoryNative.instance.multiPartyRecorder(
+      fps: fps,
+      audioOnly: audioOnly,
+      format: format,
+      type: type,
+      videoSize: videoSize);
 }
 
 VideoRenderer videoRenderer() {
