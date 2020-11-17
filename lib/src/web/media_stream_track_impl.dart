@@ -2,35 +2,42 @@ import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js' as js;
 
+import 'package:flutter/foundation.dart';
+
 import '../interface/media_stream_track.dart';
 
 class MediaStreamTrackWeb extends MediaStreamTrack {
-  MediaStreamTrackWeb(this.jsTrack) {
+  MediaStreamTrackWeb(this.jsTrack, {bool remote})
+      : super(
+          id: jsTrack.id,
+          label: jsTrack.label,
+          kind: jsTrack.kind,
+          enabled: jsTrack.enabled,
+          remote: remote,
+          switched: false,
+          switching: false,
+          running: true,
+        ) {
     jsTrack.onEnded.listen((event) {
-      onEnded?.call();
+      value = value.copyWith(running: false);
     });
     jsTrack.onMute.listen((event) {
-      onMute?.call();
+      value = value.copyWith(enabled: false);
     });
   }
 
   final html.MediaStreamTrack jsTrack;
+  bool _isReleased = false;
 
   @override
-  String get id => jsTrack.id;
-
-  @override
-  String get kind => jsTrack.kind;
-
-  @override
-  String get label => jsTrack.label;
-
-  @override
-  bool get enabled => jsTrack.enabled;
-
-  @override
-  set enabled(bool b) {
-    jsTrack.enabled = b;
+  set enabled(bool enabled) {
+    var old = value.enabled;
+    try {
+      jsTrack.enabled = enabled;
+      value = value.copyWith(enabled: enabled);
+    } catch (error) {
+      value = value.copyWith(enabled: old);
+    }
   }
 
   @override
@@ -40,12 +47,12 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
   }
 
   @override
-  Future<void> adaptRes(int width, int height) async {
+  Future<void> adaptRes(int width, int height, {int frameRate}) async {
     // TODO(cloudwebrtc): ???
   }
 
   @override
-  void setVolume(double volume) {
+  Future<void> setVolume(double volume) async {
     final constraints = jsTrack.getConstraints();
     constraints['volume'] = volume;
     js.JsObject.fromBrowserObject(jsTrack)
@@ -53,13 +60,40 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
   }
 
   @override
-  void setMicrophoneMute(bool mute) {
+  Future<void> setMicrophoneMute(bool mute) async {
     jsTrack.enabled = !mute;
   }
 
   @override
-  void enableSpeakerphone(bool enable) {
-    // Should this throw error?
+  Future<void> enableSpeakerphone(bool enable) async {
+    // var old = value.enabled;
+    // try {
+    //   value = value.copyWith(speakerEnabling: true);
+    //   value = value.copyWith(speakerEnabled: enable, speakerEnabling: false);
+    // } catch (error) {
+    //   value = value.copyWith(speakerEnabled: old, speakerEnabling: false);
+    // }
+  }
+
+  @override
+  Future<void> stop() async {}
+
+  @override
+  Future<void> start() async {}
+
+  @override
+  Future<bool> restartCamera() async {
+    return SynchronousFuture(false);
+  }
+
+  @override
+  Future<void> release() async {
+    if (_isReleased) {
+      return;
+    }
+    jsTrack.stop();
+    _isReleased = true;
+    value = MediaStreamTrackValue.uninitialized();
   }
 
   @override
@@ -79,8 +113,9 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
 
   @override
   Future<void> dispose() {
-    jsTrack.stop();
-    return super.dispose();
+    release();
+    super.dispose();
+    return null;
   }
 
   @override

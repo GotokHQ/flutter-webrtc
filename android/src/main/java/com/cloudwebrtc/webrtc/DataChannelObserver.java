@@ -27,7 +27,7 @@ class DataChannelObserver implements DataChannel.Observer, EventChannel.StreamHa
         eventChannel.setStreamHandler(this);
     }
 
-    private String dataChannelStateString(DataChannel.State dataChannelState) {
+    public static String dataChannelStateString(DataChannel.State dataChannelState) {
         switch (dataChannelState) {
             case CONNECTING:
                 return "connecting";

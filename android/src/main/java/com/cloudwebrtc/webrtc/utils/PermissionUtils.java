@@ -29,6 +29,15 @@ public class PermissionUtils {
   /** Incrementing counter for permission requests. Each request must have a unique numeric code. */
   private static int requestCode;
 
+
+  private static boolean hasPermission(
+          Activity activity,String permissions) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M)
+      return true;
+    else
+      return activity.checkSelfPermission(permissions) ==  PackageManager.PERMISSION_GRANTED;
+  }
+
   private static void requestPermissions(
       Activity activity, String[] permissions, ResultReceiver resultReceiver) {
     // Ask the Context whether we have already been granted the requested

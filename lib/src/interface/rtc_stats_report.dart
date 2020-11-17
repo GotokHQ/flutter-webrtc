@@ -1,7 +1,44 @@
+import 'utils.dart';
+
+class RTCStatsReport {
+  RTCStatsReport(this.timestamp, this.stats);
+  factory RTCStatsReport.fromMap(Map<String, dynamic> map) {
+    var statsMap = asStringKeyedMap(map['stats']);
+    final stats = statsMap.map(
+      (key, value) => MapEntry(
+        key,
+        StatsReport.fromMap(asStringKeyedMap(value)),
+      ),
+    );
+    return RTCStatsReport(map['timestamp'], stats);
+  }
+
+  double timestamp;
+  Map<String, StatsReport> stats;
+
+  @override
+  String toString() {
+    return '$runtimeType('
+        'id: $timestamp, '
+        'type: $stats, )';
+  }
+}
+
 class StatsReport {
   StatsReport(this.id, this.type, this.timestamp, this.values);
-  final String id;
-  final String type;
-  final double timestamp;
-  final Map<dynamic, dynamic> values;
+  factory StatsReport.fromMap(Map<String, dynamic> map) {
+    return StatsReport(map['id'], map['type'], map['timestamp'], map['values']);
+  }
+  String id;
+  String type;
+  double timestamp;
+  Map<dynamic, dynamic> values;
+  @override
+  String toString() {
+    return '$runtimeType('
+        'id: $id, '
+        'type: $type, '
+        'timestamp: $timestamp, '
+        'values: $values )';
+  }
 }

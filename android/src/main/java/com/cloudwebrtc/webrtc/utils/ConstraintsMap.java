@@ -1,5 +1,6 @@
 package com.cloudwebrtc.webrtc.utils;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,16 +44,16 @@ public class ConstraintsMap {
         return (int) mMap.get(name);
     }
 
+    public double getLong(String name){
+        return (long) mMap.get(name);
+    }
+
     public String getString(String name){
         return (String) mMap.get(name);
     }
 
     public ConstraintsMap getMap(String name){
-        Object value = mMap.get(name);
-        if (value == null) {
-            return null;
-        }
-        return new ConstraintsMap((Map<String, Object>) value);
+        return new ConstraintsMap((Map<String, Object>)mMap.get(name));
     }
 
     public ObjectType getType(String name) {
@@ -69,8 +70,6 @@ public class ConstraintsMap {
             return ObjectType.Map;
         } else if (value instanceof ArrayList) {
             return ObjectType.Array;
-        } else if (value instanceof Byte) {
-            return ObjectType.Byte;
         } else {
             throw new IllegalArgumentException("Invalid value " + value.toString() + " for key " + name +
                     "contained in ConstraintsMap");
@@ -93,11 +92,11 @@ public class ConstraintsMap {
         mMap.put(key, value);
     }
 
-    public void putString(String key, String value) {
+    public void putBigInt(String key, BigInteger value) {
         mMap.put(key, value);
     }
 
-    public void putByte(String key, byte[] value) {
+    public void putString(String key, String value) {
         mMap.put(key, value);
     }
 
@@ -118,11 +117,7 @@ public class ConstraintsMap {
     }
 
     public ConstraintsArray getArray(String name){
-        Object value = mMap.get(name);
-        if (value == null) {
-            return null;
-        }
-        return new ConstraintsArray((ArrayList<Object>) value);
+        return new ConstraintsArray((ArrayList<Object>)mMap.get(name));
     }
 
     public ArrayList<Object> getListArray(String name){

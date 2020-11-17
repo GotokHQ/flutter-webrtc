@@ -25,6 +25,8 @@ typedef RemoveTrackCallback = void Function(
     MediaStream stream, MediaStreamTrack track);
 typedef RTCDataChannelCallback = void Function(RTCDataChannel channel);
 typedef RenegotiationNeededCallback = void Function();
+typedef IceCandidatesRemovedCallback = void Function(
+    List<RTCIceCandidate> candidate);
 
 /// Unified-Plan
 typedef UnifiedPlanTrackCallback = void Function(RTCTrackEvent event);
@@ -44,6 +46,7 @@ abstract class RTCPeerConnection {
   RemoveTrackCallback onRemoveTrack;
   RTCDataChannelCallback onDataChannel;
   RenegotiationNeededCallback onRenegotiationNeeded;
+  IceCandidatesRemovedCallback onIceCandidatesRemoved;
 
   /// Unified-Plan
   UnifiedPlanTrackCallback onTrack;
@@ -79,7 +82,9 @@ abstract class RTCPeerConnection {
 
   Future<void> addCandidate(RTCIceCandidate candidate);
 
-  Future<List<StatsReport>> getStats([MediaStreamTrack track]);
+  Future<void> removeIceCandidates(List<RTCIceCandidate> candidates);
+
+  Future<RTCStatsReport> getStats([MediaStreamTrack track]);
 
   List<MediaStream> getLocalStreams();
 
@@ -113,4 +118,6 @@ abstract class RTCPeerConnection {
       {MediaStreamTrack track,
       RTCRtpMediaType kind,
       RTCRtpTransceiverInit init});
+
+  Future<void> restartIce();
 }

@@ -43,7 +43,7 @@ class _MyAppState extends State<LoopBackSample> {
   void handleStatsReport(Timer timer) async {
     if (_peerConnection != null) {
       var reports = await _peerConnection.getStats();
-      reports.forEach((report) {
+      reports.stats.forEach((key, report) {
         print('report => { ');
         print('    id: ' + report.id + ',');
         print('    type: ' + report.type + ',');

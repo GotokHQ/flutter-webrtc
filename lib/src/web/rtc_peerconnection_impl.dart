@@ -3,6 +3,9 @@ import 'dart:html' as html;
 import 'dart:js' as js;
 import 'dart:js_util' as jsutil;
 
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter_webrtc/src/web/rtc_rtp_receiver_impl.dart';
+
 import '../interface/enums.dart';
 import '../interface/media_stream.dart';
 import '../interface/media_stream_track.dart';
@@ -49,6 +52,16 @@ class RTCPeerConnectionWeb extends RTCPeerConnection {
           onRemoveTrack?.call(_remoteStream, track);
         });
       });
+    });
+
+    _jsPc.onTrack.listen((rtcTrackEvent) {
+      final track = MediaStreamTrackWeb(rtcTrackEvent.track);
+      final streams = rtcTrackEvent.streams
+          .map((e) => MediaStreamWeb(e, _peerConnectionId))
+          .toList();
+      final receiver = RTCRtpReceiverWeb(rtcTrackEvent.receiver);
+      onTrack?.call(
+          RTCTrackEvent(receiver: receiver, streams: streams, track: track));
     });
 
     _jsPc.onDataChannel.listen((dataChannelEvent) {
@@ -199,15 +212,20 @@ class RTCPeerConnectionWeb extends RTCPeerConnection {
   }
 
   @override
-  Future<List<StatsReport>> getStats([MediaStreamTrack track]) async {
+  Future<RTCStatsReport> getStats([MediaStreamTrack track]) async {
     final stats = await _jsPc.getStats();
-    var report = <StatsReport>[];
+    var report = <String, StatsReport>{};
+
     stats.forEach((key, value) {
-      report.add(
-          StatsReport(value['id'], value['type'], value['timestamp'], value));
+      report[key] =
+          StatsReport(value['id'], value['type'], value['timestamp'], value);
     });
-    return report;
+    return RTCStatsReport(null, report);
   }
+
+  @override
+  Future<void> restartIce() =>
+      jsutil.promiseToFuture(jsutil.callMethod(_jsPc, 'restartIce', []));
 
   @override
   List<MediaStream> getLocalStreams() => _jsPc
@@ -318,6 +336,11 @@ class RTCPeerConnectionWeb extends RTCPeerConnection {
       RTCRtpMediaType kind,
       RTCRtpTransceiverInit init}) {
     // TODO: implement addTransceiver
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> removeIceCandidates(List<RTCIceCandidate> candidates) {
     throw UnimplementedError();
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
+import 'package:flutter_webrtc/src/interface/utils.dart';
 
 import '../interface/enums.dart';
 import '../interface/media_stream.dart';
@@ -126,31 +127,43 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
         _remoteStreams.removeWhere((it) => it.id == streamId);
         break;
       case 'onAddTrack':
-        String streamId = map['streamId'];
         Map<dynamic, dynamic> track = map['track'];
 
-        var newTrack = MediaStreamTrackNative(
-            map['trackId'], track['label'], track['kind'], track['enabled']);
+        List<MediaStream> streams =
+            map['streams'].map<MediaStream>((dynamic val) {
+          return MediaStreamNative(val as String, _peerConnectionId);
+        }).toList();
+
+        RTCRtpReceiver receiver =
+            RTCRtpReceiverNative.fromMap(asStringKeyedMap(map['receiver']));
+
+        var newTrack = MediaStreamTrackNative(map['trackId'], track['label'],
+            track['kind'], track['enabled'], track['remote']);
         String kind = track['kind'];
-
-        var stream =
-            _remoteStreams.firstWhere((it) => it.id == streamId, orElse: () {
-          var newStream = MediaStreamNative(streamId, _peerConnectionId);
-          _remoteStreams.add(newStream);
-          return newStream;
-        });
-
-        var oldTracks = (kind == 'audio')
-            ? stream.getAudioTracks()
-            : stream.getVideoTracks();
-        var oldTrack = oldTracks.isNotEmpty ? oldTracks[0] : null;
-        if (oldTrack != null) {
-          stream.removeTrack(oldTrack, removeFromNative: false);
-          onRemoveTrack?.call(stream, oldTrack);
+        if (streams.isNotEmpty) {
+          var streamId = streams.first.id;
+          var stream =
+              _remoteStreams.firstWhere((it) => it.id == streamId, orElse: () {
+            var newStream = MediaStreamNative(streamId, _peerConnectionId);
+            _remoteStreams.add(newStream);
+            return newStream;
+          });
+          var oldTracks = (kind == 'audio')
+              ? stream.getAudioTracks()
+              : stream.getVideoTracks();
+          var oldTrack = oldTracks.isNotEmpty ? oldTracks[0] : null;
+          if (oldTrack != null) {
+            stream.removeTrack(oldTrack, removeFromNative: false);
+            onRemoveTrack?.call(stream, oldTrack);
+          }
+          stream.addTrack(newTrack, addToNative: false);
+          onAddTrack?.call(stream, newTrack);
         }
-
-        stream.addTrack(newTrack, addToNative: false);
-        onAddTrack?.call(stream, newTrack);
+        _receivers.firstWhere((it) => it.receiverId == receiver.receiverId,
+            orElse: () {
+          _receivers.add(receiver);
+          return receiver;
+        });
         break;
       case 'onRemoveTrack':
         String streamId = map['streamId'];
@@ -159,8 +172,8 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
           return null;
         });
         Map<dynamic, dynamic> track = map['track'];
-        var oldTrack = MediaStreamTrackNative(
-            map['trackId'], track['label'], track['kind'], track['enabled']);
+        var oldTrack = MediaStreamTrackNative(map['trackId'], track['label'],
+            track['kind'], track['enabled'], track['remote']);
         onRemoveTrack?.call(stream, oldTrack);
         break;
       case 'didOpenDataChannel':
@@ -369,22 +382,27 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
   }
 
   @override
-  Future<List<StatsReport>> getStats([MediaStreamTrack track]) async {
+  Future<void> removeIceCandidates(List<RTCIceCandidate> candidates) async {
+    await _channel.invokeMethod('removeIceCandidates', <String, dynamic>{
+      'peerConnectionId': _peerConnectionId,
+      'candidates': candidates
+          .map((RTCIceCandidate candidate) => candidate.toMap())
+          .toList(),
+    });
+  }
+
+  @override
+  Future<RTCStatsReport> getStats([MediaStreamTrack track]) async {
     try {
-      final response = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+      final response = await _channel.invokeMethod(
           'getStats', <String, dynamic>{
         'peerConnectionId': _peerConnectionId,
         'track': track != null ? track.id : null
       });
-      var stats = <StatsReport>[];
       if (response != null) {
-        List<dynamic> reports = response['stats'];
-        reports.forEach((report) {
-          stats.add(StatsReport(report['id'], report['type'],
-              report['timestamp'], report['values']));
-        });
+        return RTCStatsReport.fromMap(asStringKeyedMap(response));
       }
-      return stats;
+      return null;
     } on PlatformException catch (e) {
       throw 'Unable to RTCPeerConnection::getStats: ${e.message}';
     }
@@ -537,5 +555,13 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
     } on PlatformException catch (e) {
       throw 'Unable to RTCPeerConnection::addTransceiver: ${e.message}';
     }
+  }
+
+  @override
+  Future<void> restartIce() async {
+    final response =
+        await _channel.invokeMethod('restartIce', <String, dynamic>{
+      'peerConnectionId': _peerConnectionId,
+    });
   }
 }

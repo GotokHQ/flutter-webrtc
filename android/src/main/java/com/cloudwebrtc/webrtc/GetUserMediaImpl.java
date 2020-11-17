@@ -1,6 +1,7 @@
 package com.cloudwebrtc.webrtc;
 
 import android.Manifest;
+import android.Manifest;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentTransaction;
@@ -53,18 +54,18 @@ import org.webrtc.Camera1Capturer;
 import org.webrtc.Camera1Enumerator;
 import org.webrtc.Camera2Capturer;
 import org.webrtc.Camera2Enumerator;
-import org.webrtc.CameraEnumerationAndroid.CaptureFormat;
+import org.webrtc.CameraEnumerationAndroid;
 import org.webrtc.CameraEnumerator;
 import org.webrtc.CameraVideoCapturer;
 import org.webrtc.MediaConstraints;
 import org.webrtc.MediaStream;
 import org.webrtc.MediaStreamTrack;
 import org.webrtc.PeerConnectionFactory;
-import org.webrtc.ScreenCapturerAndroid;
 import org.webrtc.SurfaceTextureHelper;
 import org.webrtc.VideoCapturer;
 import org.webrtc.VideoSource;
 import org.webrtc.VideoTrack;
+import org.webrtc.audio.AudioDeviceModule;
 import org.webrtc.audio.JavaAudioDeviceModule;
 
 import java.io.File;
@@ -77,11 +78,10 @@ import java.util.Map;
 import io.flutter.plugin.common.MethodChannel.Result;
 
 /**
- * The implementation of {@code getUserMedia} extracted into a separate file in order to reduce
- * complexity and to (somewhat) separate concerns.
+ * The implementation of {@code getUserMedia} extracted into a separate file in
+ * order to reduce complexity and to (somewhat) separate concerns.
  */
-class GetUserMediaImpl {
-
+public class GetUserMediaImpl {
     private static final int DEFAULT_WIDTH = 1280;
     private static final int DEFAULT_HEIGHT = 720;
     private static final int DEFAULT_FPS = 30;
@@ -98,26 +98,28 @@ class GetUserMediaImpl {
 
     static final String TAG = FlutterWebRTCPlugin.TAG;
 
-    private final Map<String, VideoCapturer> mVideoCapturers = new HashMap<>();
+    private final Map<String, VideoCapturerDesc> mVideoCapturers
+            = new HashMap<String, VideoCapturerDesc>();
 
-    private final StateProvider stateProvider;
     private final Context applicationContext;
 
-    static final int minAPILevel = Build.VERSION_CODES.LOLLIPOP;
+
+    private final SparseArray<MediaRecorderImpl> mediaRecorders = new SparseArray<>();
+    static final int minAPILevel = Build.VERSION_CODES.O;
     private MediaProjectionManager mProjectionManager = null;
     private static MediaProjection sMediaProjection = null;
+    private ConstraintsMap mConstraints;
+    private List<CameraSwitchCallback> cameraSwitchListeners = new ArrayList<>();
+    private final Object cameraSwitchMutex= new Object();
+    private Handler handler = new Handler(Looper.getMainLooper());
+    private final StateProvider stateProvider;
 
     final AudioSamplesInterceptor inputSamplesInterceptor = new AudioSamplesInterceptor();
     private OutputAudioSamplesInterceptor outputSamplesInterceptor = null;
-    JavaAudioDeviceModule audioDeviceModule;
-    private final SparseArray<MediaRecorderImpl> mediaRecorders = new SparseArray<>();
+    private JavaAudioDeviceModule audioDeviceModule;
 
     public void screenRequestPremissions(ResultReceiver resultReceiver) {
         final Activity activity = stateProvider.getActivity();
-        if (activity == null) {
-            // Activity went away, nothing we can do.
-            return;
-        }
 
         Bundle args = new Bundle();
         args.putParcelable(RESULT_RECEIVER, resultReceiver);
@@ -126,11 +128,10 @@ class GetUserMediaImpl {
         ScreenRequestPermissionsFragment fragment = new ScreenRequestPermissionsFragment();
         fragment.setArguments(args);
 
-        FragmentTransaction transaction =
-                activity
-                        .getFragmentManager()
-                        .beginTransaction()
-                        .add(fragment, fragment.getClass().getName());
+        FragmentTransaction transaction
+                = activity.getFragmentManager().beginTransaction().add(
+                fragment,
+                fragment.getClass().getName());
 
         try {
             transaction.commit();
@@ -149,27 +150,27 @@ class GetUserMediaImpl {
             if (resultCode != Activity.RESULT_OK) {
                 Activity activity = this.getActivity();
                 Bundle args = getArguments();
-                resultReceiver = args.getParcelable(RESULT_RECEIVER);
+                resultReceiver = (ResultReceiver) args.getParcelable(RESULT_RECEIVER);
                 requestCode = args.getInt(REQUEST_CODE);
                 requestStart(activity, requestCode);
             }
         }
 
         public void requestStart(Activity activity, int requestCode) {
-            if (android.os.Build.VERSION.SDK_INT < minAPILevel) {
-                Log.w(
-                        TAG,
-                        "Can't run requestStart() due to a low API level. API level 21 or higher is required.");
+            if (Build.VERSION.SDK_INT < minAPILevel) {
+                Log.w(TAG, "Can't run requestStart() due to a low API level. API level 21 or higher is required.");
                 return;
             } else {
                 MediaProjectionManager mediaProjectionManager =
-                        (MediaProjectionManager) activity.getSystemService(Context.MEDIA_PROJECTION_SERVICE);
+                        (MediaProjectionManager) activity.getSystemService(
+                                Context.MEDIA_PROJECTION_SERVICE);
 
                 // call for the projection manager
                 this.startActivityForResult(
                         mediaProjectionManager.createScreenCaptureIntent(), requestCode);
             }
         }
+
 
         @Override
         public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -195,20 +196,24 @@ class GetUserMediaImpl {
         private void finish() {
             Activity activity = getActivity();
             if (activity != null) {
-                activity.getFragmentManager().beginTransaction().remove(this).commitAllowingStateLoss();
+                activity.getFragmentManager().beginTransaction()
+                        .remove(this)
+                        .commitAllowingStateLoss();
             }
         }
 
         @Override
         public void onResume() {
             super.onResume();
+
             checkSelfPermissions(/* requestPermissions */ true);
         }
     }
 
-    GetUserMediaImpl(StateProvider stateProvider, Context applicationContext) {
+    GetUserMediaImpl(StateProvider stateProvider, Context applicationContext, JavaAudioDeviceModule audioDeviceModule) {
         this.stateProvider = stateProvider;
         this.applicationContext = applicationContext;
+        this.audioDeviceModule = audioDeviceModule;
     }
 
     static private void resultError(String method, String error, Result result) {
@@ -220,34 +225,38 @@ class GetUserMediaImpl {
     /**
      * Includes default constraints set for the audio media type.
      *
-     * @param audioConstraints <tt>MediaConstraints</tt> instance to be filled with the default
-     *                         constraints for audio media type.
+     * @param audioConstraints <tt>MediaConstraints</tt> instance to be filled
+     *                         with the default constraints for audio media type.
      */
     private void addDefaultAudioConstraints(MediaConstraints audioConstraints) {
         audioConstraints.optional.add(
                 new MediaConstraints.KeyValuePair("googNoiseSuppression", "true"));
         audioConstraints.optional.add(
                 new MediaConstraints.KeyValuePair("googEchoCancellation", "true"));
-        audioConstraints.optional.add(new MediaConstraints.KeyValuePair("echoCancellation", "true"));
+        audioConstraints.optional.add(
+                new MediaConstraints.KeyValuePair("echoCancellation", "true"));
         audioConstraints.optional.add(
                 new MediaConstraints.KeyValuePair("googEchoCancellation2", "true"));
         audioConstraints.optional.add(
-                new MediaConstraints.KeyValuePair("googDAEchoCancellation", "true"));
+                new MediaConstraints.KeyValuePair(
+                        "googDAEchoCancellation", "true"));
     }
 
     /**
      * Create video capturer via given facing mode
      *
-     * @param enumerator a <tt>CameraEnumerator</tt> provided by webrtc it can be Camera1Enumerator or
-     *                   Camera2Enumerator
-     * @param isFacing   'user' mapped with 'front' is true (default) 'environment' mapped with 'back'
-     *                   is false
+     * @param enumerator a <tt>CameraEnumerator</tt> provided by webrtc
+     *                   it can be Camera1Enumerator or Camera2Enumerator
+     * @param isFrontFacing   'user' mapped with 'front' is true (default)
+     *                   'environment' mapped with 'back' is false
      * @param sourceId   (String) use this sourceId and ignore facing mode if specified.
-     * @return VideoCapturer can invoke with <tt>startCapture</tt>/<tt>stopCapture</tt> <tt>null</tt>
-     * if not matched camera with specified facing mode.
+     * @return VideoCapturer can invoke with <tt>startCapture</tt>/<tt>stopCapture</tt>
+     * <tt>null</tt> if not matched camera with specified facing mode.
      */
     private VideoCapturer createVideoCapturer(
-            CameraEnumerator enumerator, boolean isFacing, String sourceId) {
+            CameraEnumerator enumerator,
+            boolean isFrontFacing,
+            String sourceId) {
         VideoCapturer videoCapturer = null;
 
         // if sourceId given, use specified sourceId first
@@ -268,9 +277,9 @@ class GetUserMediaImpl {
         }
 
         // otherwise, use facing mode
-        String facingStr = isFacing ? "front" : "back";
+        String facingStr = isFrontFacing ? "front" : "back";
         for (String name : deviceNames) {
-            if (enumerator.isFrontFacing(name) == isFacing) {
+            if (enumerator.isFrontFacing(name) == isFrontFacing) {
                 videoCapturer = enumerator.createCapturer(name, new CameraEventsHandler());
                 if (videoCapturer != null) {
                     Log.d(TAG, "Create " + facingStr + " camera " + name + " succeeded");
@@ -287,18 +296,25 @@ class GetUserMediaImpl {
     /**
      * Retrieves "facingMode" constraint value.
      *
-     * @param mediaConstraints a <tt>ConstraintsMap</tt> which represents "GUM" constraints argument.
-     * @return String value of "facingMode" constraints in "GUM" or <tt>null</tt> if not specified.
+     * @param mediaConstraints a <tt>ConstraintsMap</tt> which represents "GUM"
+     *                         constraints argument.
+     * @return String value of "facingMode" constraints in "GUM" or
+     * <tt>null</tt> if not specified.
      */
     private String getFacingMode(ConstraintsMap mediaConstraints) {
-        return mediaConstraints == null ? null : mediaConstraints.getString("facingMode");
+        return
+                mediaConstraints == null
+                        ? null
+                        : mediaConstraints.getString("facingMode");
     }
 
     /**
      * Retrieves "sourceId" constraint value.
      *
-     * @param mediaConstraints a <tt>ConstraintsMap</tt> which represents "GUM" constraints argument
-     * @return String value of "sourceId" optional "GUM" constraint or <tt>null</tt> if not specified.
+     * @param mediaConstraints a <tt>ConstraintsMap</tt> which represents "GUM"
+     *                         constraints argument
+     * @return String value of "sourceId" optional "GUM" constraint or
+     * <tt>null</tt> if not specified.
      */
     private String getSourceIdConstraint(ConstraintsMap mediaConstraints) {
         if (mediaConstraints != null
@@ -310,7 +326,9 @@ class GetUserMediaImpl {
                 if (optional.getType(i) == ObjectType.Map) {
                     ConstraintsMap option = optional.getMap(i);
 
-                    if (option.hasKey("sourceId") && option.getType("sourceId") == ObjectType.String) {
+                    if (option.hasKey("sourceId")
+                            && option.getType("sourceId")
+                            == ObjectType.String) {
                         return option.getString("sourceId");
                     }
                 }
@@ -326,9 +344,10 @@ class GetUserMediaImpl {
             audioConstraints = new MediaConstraints();
             addDefaultAudioConstraints(audioConstraints);
         } else {
-            audioConstraints = MediaConstraintsUtils.parseMediaConstraints(constraints.getMap("audio"));
+            audioConstraints
+                    = MediaConstraintsUtils.parseMediaConstraints(
+                    constraints.getMap("audio"));
         }
-
         Log.i(TAG, "getUserMedia(audio): " + audioConstraints);
 
         String trackId = stateProvider.getNextTrackUUID();
@@ -351,17 +370,6 @@ class GetUserMediaImpl {
         //   and has a new syntax/attrs to specify resolution
         //   should change `parseConstraints()` according
         //   see: https://www.w3.org/TR/mediacapture-streams/#idl-def-MediaTrackConstraints
-
-        ConstraintsMap videoConstraintsMap = null;
-        ConstraintsMap videoConstraintsMandatory = null;
-
-        if (constraints.getType("video") == ObjectType.Map) {
-            videoConstraintsMap = constraints.getMap("video");
-            if (videoConstraintsMap.hasKey("mandatory")
-                    && videoConstraintsMap.getType("mandatory") == ObjectType.Map) {
-                videoConstraintsMandatory = videoConstraintsMap.getMap("mandatory");
-            }
-        }
 
         final ArrayList<String> requestPermissions = new ArrayList<>();
 
@@ -407,7 +415,7 @@ class GetUserMediaImpl {
         }
 
         /// Only systems pre-M, no additional permission request is needed.
-        if (VERSION.SDK_INT < VERSION_CODES.M) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             getUserMedia(constraints, result, mediaStream, requestPermissions);
             return;
         }
@@ -436,19 +444,6 @@ class GetUserMediaImpl {
 
     void getDisplayMedia(
             final ConstraintsMap constraints, final Result result, final MediaStream mediaStream) {
-        ConstraintsMap videoConstraintsMap = null;
-        ConstraintsMap videoConstraintsMandatory = null;
-
-        if (constraints.getType("video") == ObjectType.Map) {
-            videoConstraintsMap = constraints.getMap("video");
-            if (videoConstraintsMap.hasKey("mandatory")
-                    && videoConstraintsMap.getType("mandatory") == ObjectType.Map) {
-                videoConstraintsMandatory = videoConstraintsMap.getMap("mandatory");
-            }
-        }
-
-        final ConstraintsMap videoConstraintsMandatory2 = videoConstraintsMandatory;
-
         screenRequestPremissions(
                 new ResultReceiver(new Handler(Looper.getMainLooper())) {
                     @Override
@@ -463,87 +458,101 @@ class GetUserMediaImpl {
                             return;
                         }
 
-                        MediaStreamTrack[] tracks = new MediaStreamTrack[1];
                         VideoCapturer videoCapturer = null;
-                        videoCapturer =
-                                new ScreenCapturerAndroid(
-                                        mediaProjectionData,
-                                        new MediaProjection.Callback() {
-                                            @Override
-                                            public void onStop() {
-                                                resultError("MediaProjection.Callback()", "User revoked permission to capture the screen.", result);
-                                            }
-                                        });
+                        videoCapturer = new ScreenCapturerWithRotation(applicationContext, mediaProjectionData, new MediaProjection.Callback() {
+                            @Override
+                            public void onStop() {
+                                Log.e(TAG, "User revoked permission to capture the screen.");
+                                //handler.post(() -> result.error(null, "User revoked permission to capture the screen.", null));
+                                return;
+                            }
+                        });
+
                         if (videoCapturer == null) {
                             resultError("screenRequestPremissions", "GetDisplayMediaFailed, User revoked permission to capture the screen.", result);
                             return;
                         }
 
+                            ConstraintsMap videoConstraintsMap = null;
+                            ConstraintsMap videoConstraintsMandatory = null;
+
+                            if (constraints.getType("video") == ObjectType.Map) {
+                                videoConstraintsMap = constraints.getMap("video");
+                                if (videoConstraintsMap.hasKey("mandatory")
+                                        && videoConstraintsMap.getType("mandatory")
+                                        == ObjectType.Map) {
+                                    videoConstraintsMandatory
+                                            = videoConstraintsMap.getMap("mandatory");
+                                }
+                            }
+
+
                         PeerConnectionFactory pcFactory = stateProvider.getPeerConnectionFactory();
                         VideoSource videoSource = pcFactory.createVideoSource(true);
 
-                        String threadName = Thread.currentThread().getName();
-                        SurfaceTextureHelper surfaceTextureHelper =
-                                SurfaceTextureHelper.create(threadName, EglUtils.getRootEglBaseContext());
-                        videoCapturer.initialize(
-                                surfaceTextureHelper, applicationContext, videoSource.getCapturerObserver());
+                            Context context = stateProvider.getActivity();
+                            String threadName = Thread.currentThread().getName();
+                            SurfaceTextureHelper surfaceTextureHelper = SurfaceTextureHelper.create(threadName, EglUtils.getRootEglBaseContext());
+                            videoCapturer.initialize(surfaceTextureHelper, context, videoSource.getCapturerObserver());
 
-                        WindowManager wm =
-                                (WindowManager) applicationContext.getSystemService(Context.WINDOW_SERVICE);
+                            WindowManager wm = (WindowManager) applicationContext
+                                    .getSystemService(Context.WINDOW_SERVICE);
 
-                        int width = wm.getDefaultDisplay().getWidth();
-                        int height = wm.getDefaultDisplay().getHeight();
-                        int fps = DEFAULT_FPS;
 
+                            // Fall back to defaults if keys are missing.
+                            int width
+                                    = videoConstraintsMandatory.hasKey("minWidth")
+                                    ? videoConstraintsMandatory.getInt("minWidth")
+                                    : wm.getDefaultDisplay().getWidth();
+                            int height
+                                    = videoConstraintsMandatory.hasKey("minHeight")
+                                    ? videoConstraintsMandatory.getInt("minHeight")
+                                    : wm.getDefaultDisplay().getHeight();
+                            int fps
+                                    = videoConstraintsMandatory.hasKey("minFrameRate")
+                                    ? videoConstraintsMandatory.getInt("minFrameRate")
+                                    : DEFAULT_FPS;
                         videoCapturer.startCapture(width, height, fps);
                         Log.d(TAG, "ScreenCapturerAndroid.startCapture: " + width + "x" + height + "@" + fps);
 
                         String trackId = stateProvider.getNextTrackUUID();
-                        mVideoCapturers.put(trackId, videoCapturer);
 
-                        tracks[0] = pcFactory.createVideoTrack(trackId, videoSource);
 
-                        ConstraintsArray audioTracks = new ConstraintsArray();
+                        VideoTrack track = pcFactory.createVideoTrack(trackId, videoSource);
+                        if (track == null) {
+                            result.error(
+                                    /* type */ "createVideoTrack",
+                                    "Failed to create new video track", null);
+                            return;
+                        }
+                        mVideoCapturers.put(trackId, new VideoCapturerDesc(videoCapturer, videoSource, width, height, fps, false, null));
+
+                        videoCapturer.startCapture(width, height, fps);
+                        Log.d(TAG, "ScreenCapturerAndroid.startCapture: " + width + "x" + height + "@" + fps);
+
                         ConstraintsArray videoTracks = new ConstraintsArray();
                         ConstraintsMap successResult = new ConstraintsMap();
+                        String id = track.id();
 
-                        for (MediaStreamTrack track : tracks) {
-                            if (track == null) {
-                                continue;
-                            }
+                        mediaStream.addTrack((VideoTrack) track);
+                        stateProvider.getLocalTracks().put(id, track);
 
-                            String id = track.id();
+                        ConstraintsMap track_ = new ConstraintsMap();
+                        String kind = track.kind();
 
-                            if (track instanceof AudioTrack) {
-                                mediaStream.addTrack((AudioTrack) track);
-                            } else {
-                                mediaStream.addTrack((VideoTrack) track);
-                            }
-                            stateProvider.getLocalTracks().put(id, track);
-
-                            ConstraintsMap track_ = new ConstraintsMap();
-                            String kind = track.kind();
-
-                            track_.putBoolean("enabled", track.enabled());
-                            track_.putString("id", id);
-                            track_.putString("kind", kind);
-                            track_.putString("label", kind);
-                            track_.putString("readyState", track.state().toString());
-                            track_.putBoolean("remote", false);
-
-                            if (track instanceof AudioTrack) {
-                                audioTracks.pushMap(track_);
-                            } else {
-                                videoTracks.pushMap(track_);
-                            }
-                        }
+                        track_.putBoolean("enabled", track.enabled());
+                        track_.putString("id", id);
+                        track_.putString("kind", kind);
+                        track_.putString("label", kind);
+                        track_.putString("readyState", track.state().toString());
+                        track_.putBoolean("remote", false);
+                        videoTracks.pushMap(track_);
 
                         String streamId = mediaStream.getId();
 
                         Log.d(TAG, "MediaStream id: " + streamId);
                         stateProvider.getLocalStreams().put(streamId, mediaStream);
                         successResult.putString("streamId", streamId);
-                        successResult.putArray("audioTracks", audioTracks.toArrayList());
                         successResult.putArray("videoTracks", videoTracks.toArrayList());
                         result.success(successResult.toMap());
                     }
@@ -633,65 +642,67 @@ class GetUserMediaImpl {
         if (constraints.getType("video") == ObjectType.Map) {
             videoConstraintsMap = constraints.getMap("video");
             if (videoConstraintsMap.hasKey("mandatory")
-                    && videoConstraintsMap.getType("mandatory") == ObjectType.Map) {
-                videoConstraintsMandatory = videoConstraintsMap.getMap("mandatory");
+                    && videoConstraintsMap.getType("mandatory")
+                    == ObjectType.Map) {
+                videoConstraintsMandatory
+                        = videoConstraintsMap.getMap("mandatory");
             }
         }
-
         Log.i(TAG, "getUserMedia(video): " + videoConstraintsMap);
-
         // NOTE: to support Camera2, the device should:
         //   1. Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
         //   2. all camera support level should greater than LEGACY
-        //   see:
-        // https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics.html#INFO_SUPPORTED_HARDWARE_LEVEL
+        //   see: https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics.html#INFO_SUPPORTED_HARDWARE_LEVEL
         // TODO Enable camera2 enumerator
+        Context context = stateProvider.getActivity();
         CameraEnumerator cameraEnumerator;
 
-        if (Camera2Enumerator.isSupported(applicationContext)) {
+        if (Camera2Enumerator.isSupported(context)) {
             Log.d(TAG, "Creating video capturer using Camera2 API.");
-            cameraEnumerator = new Camera2Enumerator(applicationContext);
+            cameraEnumerator = new Camera2Enumerator(context);
         } else {
             Log.d(TAG, "Creating video capturer using Camera1 API.");
             cameraEnumerator = new Camera1Enumerator(false);
         }
 
         String facingMode = getFacingMode(videoConstraintsMap);
-        boolean isFacing = facingMode == null || !facingMode.equals("environment");
+        boolean isFrontFacing
+                = facingMode == null || !facingMode.equals("environment");
         String sourceId = getSourceIdConstraint(videoConstraintsMap);
 
-        VideoCapturer videoCapturer = createVideoCapturer(cameraEnumerator, isFacing, sourceId);
+        VideoCapturer videoCapturer
+                = createVideoCapturer(cameraEnumerator, isFrontFacing, sourceId);
 
         if (videoCapturer == null) {
             return null;
         }
 
         PeerConnectionFactory pcFactory = stateProvider.getPeerConnectionFactory();
-        VideoSource videoSource = pcFactory.createVideoSource(false);
+        VideoSource videoSource = pcFactory.createVideoSource(videoCapturer.isScreencast());
+
+        // Fall back to defaults if keys are missing.
+        int width
+                = videoConstraintsMandatory.hasKey("minWidth")
+                ? videoConstraintsMandatory.getInt("minWidth")
+                : DEFAULT_WIDTH;
+        int height
+                = videoConstraintsMandatory.hasKey("minHeight")
+                ? videoConstraintsMandatory.getInt("minHeight")
+                : DEFAULT_HEIGHT;
+        int fps
+                = videoConstraintsMandatory.hasKey("minFrameRate")
+                ? videoConstraintsMandatory.getInt("minFrameRate")
+                : DEFAULT_FPS;
+
         String threadName = Thread.currentThread().getName();
         SurfaceTextureHelper surfaceTextureHelper =
                 SurfaceTextureHelper.create(threadName, EglUtils.getRootEglBaseContext());
-        videoCapturer.initialize(
-                surfaceTextureHelper, applicationContext, videoSource.getCapturerObserver());
 
-        // Fall back to defaults if keys are missing.
-        int width =
-                videoConstraintsMandatory != null && videoConstraintsMandatory.hasKey("minWidth")
-                        ? videoConstraintsMandatory.getInt("minWidth")
-                        : DEFAULT_WIDTH;
-        int height =
-                videoConstraintsMandatory != null && videoConstraintsMandatory.hasKey("minHeight")
-                        ? videoConstraintsMandatory.getInt("minHeight")
-                        : DEFAULT_HEIGHT;
-        int fps =
-                videoConstraintsMandatory != null && videoConstraintsMandatory.hasKey("minFrameRate")
-                        ? videoConstraintsMandatory.getInt("minFrameRate")
-                        : DEFAULT_FPS;
-
+        videoCapturer.initialize(surfaceTextureHelper, stateProvider.getActivity(), videoSource.getCapturerObserver());
         videoCapturer.startCapture(width, height, fps);
 
         String trackId = stateProvider.getNextTrackUUID();
-        mVideoCapturers.put(trackId, videoCapturer);
+        mVideoCapturers.put(trackId, new VideoCapturerDesc(videoCapturer, videoSource, width, height, fps, isFrontFacing, cameraEnumerator));
 
         Log.d(TAG, "changeCaptureFormat: " + width + "x" + height + "@" + fps);
         videoSource.adaptOutputFormat(width, height, fps);
@@ -699,21 +710,25 @@ class GetUserMediaImpl {
         return pcFactory.createVideoTrack(trackId, videoSource);
     }
 
-    void removeVideoCapturer(String id) {
-        VideoCapturer videoCapturer = mVideoCapturers.get(id);
+    public void removeVideoCapturer(String id) {
+        VideoCapturerDesc videoCapturer = mVideoCapturers.get(id);
         if (videoCapturer != null) {
             try {
-                videoCapturer.stopCapture();
+                videoCapturer.capturer.stopCapture();
             } catch (InterruptedException e) {
                 Log.e(TAG, "removeVideoCapturer() Failed to stop video capturer");
             } finally {
-                videoCapturer.dispose();
+                videoCapturer.capturer.dispose();
                 mVideoCapturers.remove(id);
             }
         }
     }
 
-    @RequiresApi(api = VERSION_CODES.M)
+    public VideoCapturerDesc getVideoCapturerDesc(String id) {
+        return mVideoCapturers.get(id);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.M)
     private void requestPermissions(
             final ArrayList<String> permissions,
             final Callback successCallback,
@@ -754,26 +769,148 @@ class GetUserMediaImpl {
         }
     }
 
-    void switchCamera(String id, Result result) {
-        VideoCapturer videoCapturer = mVideoCapturers.get(id);
-        if (videoCapturer == null) {
-            resultError("switchCamera", "Video capturer not found for id: " + id, result);
-            return;
-        }
+    public void switchCamera(String id, final Result result) {
+        VideoCapturerDesc videoCapturer = mVideoCapturers.get(id);
+        if (videoCapturer != null) {
+            Log.d(TAG, "SWITCH CAMERA FOR TRACK: "+id);
+            CameraVideoCapturer cameraVideoCapturer
+                    = (CameraVideoCapturer) videoCapturer.capturer;
+            if (videoCapturer.cameraEnumerator == null) {
+                handler.post(() -> result.success(null));
+                return;
+            }
+            String[] deviceNames = videoCapturer.cameraEnumerator.getDeviceNames();
+            int deviceCount = deviceNames.length;
 
-        CameraVideoCapturer cameraVideoCapturer = (CameraVideoCapturer) videoCapturer;
-        cameraVideoCapturer.switchCamera(
-                new CameraVideoCapturer.CameraSwitchHandler() {
-                    @Override
-                    public void onCameraSwitchDone(boolean b) {
-                        result.success(b);
+            // Nothing to switch to.
+            if (deviceCount < 2) {
+                handler.post(() -> result.success(null));
+                return;
+            }
+
+            if (deviceCount == 2) {
+                synchronized (cameraSwitchMutex) {
+                    for (CameraSwitchCallback s : cameraSwitchListeners) {
+                        s.willSwitchCamera(videoCapturer.isFrontFacing, id);
+                    }
+                }
+                cameraVideoCapturer.switchCamera(new CameraVideoCapturer.CameraSwitchHandler() {
+                    public void onCameraSwitchDone(boolean isFrontCamera) {
+                        VideoCapturerDesc desc = new VideoCapturerDesc(videoCapturer.capturer, videoCapturer.videoSource, videoCapturer.width, videoCapturer.height, videoCapturer.fps, isFrontCamera, videoCapturer.cameraEnumerator);
+                        mVideoCapturers.put(id, desc);
+                        synchronized (cameraSwitchMutex) {
+                            for (CameraSwitchCallback s : cameraSwitchListeners) {
+                                s.didSwitchCamera(isFrontCamera, id);
+                            }
+                        }
+                        handler.post(() -> result.success(null));
                     }
 
-                    @Override
-                    public void onCameraSwitchError(String s) {
-                        resultError("switchCamera", "Switching camera failed: " + id, result);
+                    public void onCameraSwitchError(String error) {
+                        synchronized (cameraSwitchMutex) {
+                            for (CameraSwitchCallback s : cameraSwitchListeners) {
+                                s.didFailSwitch(id);
+                            }
+                        }
+                        handler.post(() -> result.error("switch_failed", error, null));
+                        Log.e(TAG, "onCameraSwitchError: " + error);
                     }
                 });
+                return;
+            }
+            // If we are here the device has more than 2 cameras. Cycle through them
+            // and switch to the first one of the desired facing mode.
+            switchCamera(id, videoCapturer, !videoCapturer.isFrontFacing, deviceCount, result);
+        }
+    }
+
+
+    /**
+     * Helper function which tries to switch cameras until the desired facing mode is found.
+     *
+     * @param desiredFrontFacing - The desired front facing value.
+     * @param tries - How many times to try switching.
+     */
+    private void switchCamera(String id, VideoCapturerDesc desc, boolean desiredFrontFacing, int tries, final Result result) {
+        CameraVideoCapturer capturer = (CameraVideoCapturer) desc.capturer;
+
+        capturer.switchCamera(new CameraVideoCapturer.CameraSwitchHandler() {
+            @Override
+            public void onCameraSwitchDone(boolean b) {
+                if (b != desiredFrontFacing) {
+                    int newTries = tries-1;
+                    if (newTries > 0) {
+                        switchCamera(id, desc, desiredFrontFacing, newTries, result);
+                    }
+                } else {
+                    VideoCapturerDesc newDesc = new VideoCapturerDesc(desc.capturer, desc.videoSource, desc.width, desc.height, desc.fps, desiredFrontFacing, desc.cameraEnumerator);
+                    mVideoCapturers.put(id, newDesc);
+                    synchronized (cameraSwitchMutex) {
+                        for (CameraSwitchCallback s : cameraSwitchListeners) {
+                            s.didSwitchCamera(desiredFrontFacing, id);
+                        }
+                    }
+                    handler.post(() -> result.success(null));
+                }
+            }
+
+            @Override
+            public void onCameraSwitchError(String error) {
+                synchronized (cameraSwitchMutex) {
+                    for (CameraSwitchCallback s : cameraSwitchListeners) {
+                        s.didFailSwitch(id);
+                    }
+                }
+                handler.post(() -> result.error("switch_failed", error, null));
+                Log.e(TAG, "onCameraSwitchError: " + error);
+            }
+        });
+    }
+
+    public void restartCamera(String id, final Result result) {
+        stop(id);
+        start(id);
+    }
+
+    public void start(String id) {
+        VideoCapturerDesc videoCapturer = mVideoCapturers.get(id);
+        if (videoCapturer != null) {
+            videoCapturer.capturer.startCapture(videoCapturer.width, videoCapturer.height, videoCapturer.fps);
+        }
+    }
+
+    public void stop(String id) {
+        try {
+            VideoCapturerDesc videoCapturer = mVideoCapturers.get(id);
+            if (videoCapturer != null) {
+                videoCapturer.capturer.stopCapture();
+            }
+        } catch (InterruptedException e) {
+            Log.e(TAG, "stopCamera() Failed to stop video capturer");
+        }
+    }
+
+    public void adaptOutputFormat(String id, int width, int height, int framerate, final Result result) {
+        VideoCapturerDesc videoCapturer = mVideoCapturers.get(id);
+        if (videoCapturer != null) {
+            videoCapturer.videoSource.adaptOutputFormat(width, height, framerate);
+        }
+    }
+
+    public void addCameraSwitchListener(CameraSwitchCallback listener) {
+        synchronized (cameraSwitchMutex) {
+            if (!cameraSwitchListeners.contains(listener)) {
+                cameraSwitchListeners.add(listener);
+            }
+        }
+    }
+
+    public void removeCameraSwitchListener(CameraSwitchCallback listener) {
+        synchronized (cameraSwitchMutex) {
+            if (cameraSwitchListeners.contains(listener)) {
+                cameraSwitchListeners.remove(listener);
+            }
+        }
     }
 
     /**
@@ -820,7 +957,12 @@ class GetUserMediaImpl {
     }
 
     void hasTorch(String trackId, Result result) {
-        VideoCapturer videoCapturer = mVideoCapturers.get(trackId);
+        VideoCapturerDesc videoCapturerDesc = mVideoCapturers.get(trackId);
+        if (videoCapturerDesc == null) {
+            resultError("hasTorch", "Video capturer not found for id: " + trackId, result);
+            return;
+        }
+        VideoCapturer videoCapturer = videoCapturerDesc.capturer;
         if (videoCapturer == null) {
             resultError("hasTorch", "Video capturer not found for id: " + trackId, result);
             return;
@@ -886,16 +1028,20 @@ class GetUserMediaImpl {
 
     @RequiresApi(api = VERSION_CODES.LOLLIPOP)
     void setTorch(String trackId, boolean torch, Result result) {
-        VideoCapturer videoCapturer = mVideoCapturers.get(trackId);
+        VideoCapturerDesc videoCapturerDesc = mVideoCapturers.get(trackId);
+        if (videoCapturerDesc == null) {
+            resultError("setTorch", "Video capturer not found for id: " + trackId, result);
+            return;
+        }
+        VideoCapturer videoCapturer = videoCapturerDesc.capturer;
         if (videoCapturer == null) {
             resultError("setTorch", "Video capturer not found for id: " + trackId, result);
             return;
         }
-
         if (videoCapturer instanceof Camera2Capturer) {
             CameraCaptureSession captureSession;
             CameraDevice cameraDevice;
-            CaptureFormat captureFormat;
+            CameraEnumerationAndroid.CaptureFormat captureFormat;
             int fpsUnitFactor;
             Surface surface;
             Handler cameraThreadHandler;
@@ -913,7 +1059,7 @@ class GetUserMediaImpl {
                 cameraDevice =
                         (CameraDevice) getPrivateProperty(session.getClass(), session, "cameraDevice");
                 captureFormat =
-                        (CaptureFormat) getPrivateProperty(session.getClass(), session, "captureFormat");
+                        (CameraEnumerationAndroid.CaptureFormat) getPrivateProperty(session.getClass(), session, "captureFormat");
                 fpsUnitFactor = (int) getPrivateProperty(session.getClass(), session, "fpsUnitFactor");
                 surface = (Surface) getPrivateProperty(session.getClass(), session, "surface");
                 cameraThreadHandler =
@@ -998,5 +1144,30 @@ class GetUserMediaImpl {
             this.className = className;
             this.fieldName = fieldName;
         }
+    }
+
+    public static class VideoCapturerDesc {
+        final int width;
+        final int height;
+        final int fps;
+        final boolean isFrontFacing;
+        final VideoCapturer capturer;
+        final VideoSource videoSource;
+        final CameraEnumerator cameraEnumerator;
+        VideoCapturerDesc(VideoCapturer videoCapturer, VideoSource source, int width, int height, int fps, boolean isFrontFacing, CameraEnumerator cameraEnumerator) {
+            this.capturer = videoCapturer;
+            this.videoSource = source;
+            this.width = width;
+            this.height = height;
+            this.fps = fps;
+            this.isFrontFacing = isFrontFacing;
+            this.cameraEnumerator = cameraEnumerator;
+        }
+    }
+
+    public interface CameraSwitchCallback {
+        void willSwitchCamera(boolean isFrontFacing, String trackId);
+        void didSwitchCamera(boolean isFrontFacing, String trackId);
+        void didFailSwitch(String trackId);
     }
 }
