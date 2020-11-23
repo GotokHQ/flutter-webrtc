@@ -52,9 +52,9 @@ class RTCRtpEncoding {
   RTCRtpEncoding(
       {this.rid,
       this.active,
-      this.maxBitrateBps,
+      this.maxBitrate,
       this.maxFramerate,
-      this.minBitrateBps,
+      this.minBitrate,
       this.numTemporalLayers,
       this.scaleResolutionDownBy,
       this.ssrc});
@@ -63,9 +63,9 @@ class RTCRtpEncoding {
     return RTCRtpEncoding(
         rid: map['rid'],
         active: map['active'],
-        maxBitrateBps: map['maxBitrateBps'],
+        maxBitrate: map['maxBitrate'],
         maxFramerate: map['maxFramerate'],
-        minBitrateBps: map['minBitrateBps'],
+        minBitrate: map['minBitrate'],
         numTemporalLayers: map['numTemporalLayers'],
         scaleResolutionDownBy: map['scaleResolutionDownBy'],
         ssrc: map['ssrc']);
@@ -82,10 +82,10 @@ class RTCRtpEncoding {
   /// If non-null, this represents the Transport Independent Application
   /// Specific maximum bandwidth defined in RFC3890. If null, there is no
   /// maximum bitrate.
-  int maxBitrateBps;
+  int maxBitrate;
 
   /// The minimum bitrate in bps for video.
-  int minBitrateBps;
+  int minBitrate;
 
   /// The max framerate in fps for video.
   int maxFramerate;
@@ -104,8 +104,8 @@ class RTCRtpEncoding {
   RTCRtpEncoding copyWith({
     String rid,
     bool active,
-    int maxBitrateBps,
-    int minBitrateBps,
+    int maxBitrate,
+    int minBitrate,
     int maxFramerate,
     int numTemporalLayers,
     double scaleResolutionDownBy,
@@ -114,8 +114,8 @@ class RTCRtpEncoding {
     return RTCRtpEncoding(
       rid: rid ?? this.rid,
       active: active ?? this.active,
-      maxBitrateBps: maxBitrateBps ?? this.maxBitrateBps,
-      minBitrateBps: minBitrateBps ?? this.minBitrateBps,
+      maxBitrate: maxBitrate ?? this.maxBitrate,
+      minBitrate: minBitrate ?? this.minBitrate,
       numTemporalLayers: numTemporalLayers ?? this.numTemporalLayers,
       scaleResolutionDownBy:
           scaleResolutionDownBy ?? this.scaleResolutionDownBy,
@@ -126,10 +126,10 @@ class RTCRtpEncoding {
   Map<String, dynamic> toMap() {
     return {
       if (rid != null) 'rid': rid,
-      if (active != null) 'active': active,
-      if (maxBitrateBps != null) 'maxBitrateBps': maxBitrateBps,
+      'active': active ?? true,
+      if (maxBitrate != null) 'maxBitrate': maxBitrate,
       if (maxFramerate != null) 'maxFramerate': maxFramerate,
-      if (minBitrateBps != null) 'minBitrateBps': minBitrateBps,
+      if (minBitrate != null) 'minBitrate': minBitrate,
       if (numTemporalLayers != null) 'numTemporalLayers': numTemporalLayers,
       if (scaleResolutionDownBy != null)
         'scaleResolutionDownBy': scaleResolutionDownBy,
@@ -164,8 +164,12 @@ class RTCHeaderExtension {
 }
 
 class RTCRtpParameters {
-  RTCRtpParameters(this.transactionId, this.rtcp, this.headerExtensions,
-      this.encodings, this.codecs);
+  RTCRtpParameters(
+      {this.transactionId,
+      this.rtcp,
+      this.headerExtensions,
+      this.encodings,
+      this.codecs});
 
   factory RTCRtpParameters.fromMap(Map<dynamic, dynamic> map) {
     var encodings = <RTCRtpEncoding>[];
@@ -185,7 +189,11 @@ class RTCRtpParameters {
     });
     var rtcp = RTCRTCPParameters.fromMap(map['rtcp']);
     return RTCRtpParameters(
-        map['transactionId'], rtcp, headerExtensions, encodings, codecs);
+        transactionId: map['transactionId'],
+        rtcp: rtcp,
+        headerExtensions: headerExtensions,
+        encodings: encodings,
+        codecs: codecs);
   }
 
   String transactionId;
@@ -209,11 +217,11 @@ class RTCRtpParameters {
     RTCRTCPParameters rtcp,
   }) {
     return RTCRtpParameters(
-      transactionId ?? this.transactionId,
-      rtcp ?? this.rtcp,
-      headerExtensions ?? this.headerExtensions,
-      encodings ?? this.encodings,
-      codecs ?? this.codecs,
+      transactionId: transactionId ?? this.transactionId,
+      rtcp: rtcp ?? this.rtcp,
+      headerExtensions: headerExtensions ?? this.headerExtensions,
+      encodings: encodings ?? this.encodings,
+      codecs: codecs ?? this.codecs,
     );
   }
 

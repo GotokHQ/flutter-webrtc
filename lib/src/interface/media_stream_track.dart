@@ -141,6 +141,7 @@ abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
   Future<dynamic> captureFrame([String filePath]);
 
   Future<bool> hasTorch();
+
   Future<void> setTorch(bool torch);
 
   Future<bool> restartCamera();

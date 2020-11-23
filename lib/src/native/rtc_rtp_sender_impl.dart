@@ -7,6 +7,7 @@ import '../interface/media_stream_track.dart';
 import '../interface/rtc_dtmf_sender.dart';
 import '../interface/rtc_rtp_parameters.dart';
 import '../interface/rtc_rtp_sender.dart';
+import '../interface/rtc_stats_report.dart';
 import 'media_stream_track_impl.dart';
 import 'rtc_dtmf_sender_impl.dart';
 import 'utils.dart';
@@ -26,6 +27,14 @@ class RTCRtpSenderNative extends RTCRtpSender {
         peerConnectionId);
   }
 
+  static List<RTCRtpSenderNative> fromMaps(List<dynamic> map,
+      {String peerConnectionId}) {
+    return map
+        .map((e) =>
+            RTCRtpSenderNative.fromMap(e, peerConnectionId: peerConnectionId))
+        .toList();
+  }
+
   final MethodChannel _channel = WebRTC.methodChannel();
   String _peerConnectionId;
   String _id;
@@ -34,8 +43,26 @@ class RTCRtpSenderNative extends RTCRtpSender {
   RTCRtpParameters _parameters;
   bool _ownsTrack = false;
 
-  set peerConnectionId(String id) {
-    _peerConnectionId = id;
+  @override
+  Future<List<StatsReport>> getStats() async {
+    try {
+      final response = await _channel.invokeMethod<Map<dynamic, dynamic>>(
+          'getStats', <String, dynamic>{
+        'peerConnectionId': _peerConnectionId,
+        'track': track.id
+      });
+      var stats = <StatsReport>[];
+      if (response != null) {
+        List<dynamic> reports = response['stats'];
+        reports.forEach((report) {
+          stats.add(StatsReport(report['id'], report['type'],
+              report['timestamp'], report['values']));
+        });
+      }
+      return stats;
+    } on PlatformException catch (e) {
+      throw 'Unable to RTCPeerConnection::getStats: ${e.message}';
+    }
   }
 
   @override

@@ -3,7 +3,6 @@ import 'dart:html' as html;
 import 'dart:js' as js;
 import 'dart:ui';
 
-import '../interface/enums.dart';
 import '../interface/media_recorder.dart';
 import '../interface/media_stream.dart';
 import '../interface/media_stream_track.dart';
@@ -24,10 +23,13 @@ class MediaRecorderWeb extends MediaRecorder {
   }
 
   @override
-  void startWeb(MediaStream stream,
-      {Function(dynamic blob, bool isLastOne) onDataChunk, String mimeType}) {
-    var jsStream = (stream as MediaStreamWeb).jsStream;
-    _recorder = html.MediaRecorder(jsStream.htmlStream, {'mimeType': mimeType});
+  void startWeb(
+    MediaStream stream, {
+    Function(dynamic blob, bool isLastOne) onDataChunk,
+    String mimeType = 'video/webm',
+  }) {
+    var _native = stream as MediaStreamWeb;
+    _recorder = html.MediaRecorder(_native.jsStream, {'mimeType': mimeType});
     if (onDataChunk == null) {
       var _chunks = <html.Blob>[];
       _completer = Completer<String>();

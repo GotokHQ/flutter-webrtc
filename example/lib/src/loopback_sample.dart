@@ -42,6 +42,7 @@ class _MyAppState extends State<LoopBackSample> {
 
   void handleStatsReport(Timer timer) async {
     if (_peerConnection != null) {
+/*
       var reports = await _peerConnection.getStats();
       reports.stats.forEach((key, report) {
         print('report => { ');
@@ -55,6 +56,18 @@ class _MyAppState extends State<LoopBackSample> {
         print('    }');
         print('}');
       });
+*/
+      /*
+      var senders = await _peerConnection.getSenders();
+      var canInsertDTMF = await senders[0].dtmfSender.canInsertDtmf();
+      print(canInsertDTMF);
+      await senders[0].dtmfSender.insertDTMF('1');
+      var receivers = await _peerConnection.getReceivers();
+      print(receivers[0].track.id);
+      var transceivers = await _peerConnection.getTransceivers();
+      print(transceivers[0].sender.parameters);
+      print(transceivers[0].receiver.parameters);
+      */
     }
   }
 
@@ -178,14 +191,15 @@ class _MyAppState extends State<LoopBackSample> {
             direction: TransceiverDirection.SendRecv, streams: [_localStream]),
       );
 
+      /*
       // ignore: unused_local_variable
       var transceiver = await _peerConnection.addTransceiver(
         track: _localStream.getVideoTracks()[0],
         init: RTCRtpTransceiverInit(
             direction: TransceiverDirection.SendRecv, streams: [_localStream]),
       );
+      */
 
-      /*
       // Unified-Plan Simulcast
       await _peerConnection.addTransceiver(
           track: _localStream.getVideoTracks()[0],
@@ -196,24 +210,24 @@ class _MyAppState extends State<LoopBackSample> {
               // for firefox order matters... first high resolution, then scaled resolutions...
               RTCRtpEncoding(
                 rid: 'f',
-                maxBitrateBps: 900000,
+                maxBitrate: 900000,
                 numTemporalLayers: 3,
               ),
               RTCRtpEncoding(
                 rid: 'h',
                 numTemporalLayers: 3,
-                maxBitrateBps: 300000,
+                maxBitrate: 300000,
                 scaleResolutionDownBy: 2.0,
               ),
               RTCRtpEncoding(
                 rid: 'q',
                 numTemporalLayers: 3,
-                maxBitrateBps: 100000,
+                maxBitrate: 100000,
                 scaleResolutionDownBy: 4.0,
               ),
             ],
           ));
-
+      /*
       await _peerConnection.addTransceiver(
           kind: RTCRtpMediaType.RTCRtpMediaTypeVideo);
       await _peerConnection.addTransceiver(

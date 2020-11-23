@@ -48,6 +48,12 @@ class RTCVideoRendererWeb extends VideoRenderer {
       _videoElement.style.transform = 'rotateY(${mirror ? "180" : "0"}deg)';
 
   @override
+  int get videoWidth => value.size.width.toInt();
+
+  @override
+  int get videoHeight => value.size.height.toInt();
+
+  @override
   int get textureId => _textureId;
 
   @override
@@ -103,7 +109,7 @@ class RTCVideoRendererWeb extends VideoRenderer {
       _videoElement.onCanPlay.listen(
         (dynamic _) {
           _updateAllValues();
-          print('RTCVideoRenderer: videoElement.onCanPlay ${value.toString()}');
+          //print('RTCVideoRenderer: videoElement.onCanPlay ${value.toString()}');
         },
       ),
     );
@@ -112,7 +118,8 @@ class RTCVideoRendererWeb extends VideoRenderer {
       _videoElement.onResize.listen(
         (dynamic _) {
           _updateAllValues();
-          print('RTCVideoRenderer: videoElement.onResize ${value.toString()}');
+          onResize?.call();
+          //print('RTCVideoRenderer: videoElement.onResize ${value.toString()}');
         },
       ),
     );
@@ -125,6 +132,7 @@ class RTCVideoRendererWeb extends VideoRenderer {
           // We need to look at the HTMLMediaElement.error.
           // See: https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/error
           var error = _videoElement.error;
+          print('RTCVideoRenderer: videoElement.onError, ${error.toString()}');
           throw PlatformException(
             code: _kErrorValueToErrorName[error.code],
             message:
@@ -138,7 +146,7 @@ class RTCVideoRendererWeb extends VideoRenderer {
     _subscriptions.add(
       _videoElement.onEnded.listen(
         (dynamic _) {
-          print('RTCVideoRenderer: videoElement.onEnded');
+          //print('RTCVideoRenderer: videoElement.onEnded');
         },
       ),
     );
@@ -168,7 +176,7 @@ class RTCVideoRendererWeb extends VideoRenderer {
     }
     _srcObject = stream;
     var jsStream = (stream as MediaStreamWeb).jsStream;
-    _videoElement.srcObject = jsStream.htmlStream;
+    _videoElement.srcObject = jsStream;
     _videoElement.muted = stream.ownerTag == 'local';
     value = value.copyWith(renderVideo: renderVideo);
   }

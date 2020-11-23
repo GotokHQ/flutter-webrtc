@@ -36,6 +36,12 @@ class RTCVideoRendererNative extends VideoRenderer {
   }
 
   @override
+  int get videoWidth => value.size.width.toInt();
+
+  @override
+  int get videoHeight => value.size.height.toInt();
+
+  @override
   int get textureId => _textureId;
 
   @override
