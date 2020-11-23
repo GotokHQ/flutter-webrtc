@@ -106,6 +106,9 @@ class RTCFileRenderer implements VideoSink {
     }
 
     private void initVideoEncoder() {
+        if (outputFileWidth == -1  || outputFileHeight == -1) {
+            return;
+        }
         MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, outputFileWidth, outputFileHeight);
 
         // Set some properties.  Failing to specify some of these can cause the MediaCodec
@@ -170,6 +173,11 @@ class RTCFileRenderer implements VideoSink {
     public void onFrame(VideoFrame frame) {
         if (!isRunning || isPaused) {
             return;
+        }
+        if (outputFileWidth == -1) {
+            outputFileWidth = frame.getRotatedWidth();
+            outputFileHeight = frame.getRotatedHeight();
+            initVideoEncoder();
         }
         frame.retain();
         renderThreadHandler.post(() -> renderFrameOnRenderThread(frame));

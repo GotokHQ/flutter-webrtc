@@ -4,34 +4,36 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart';
-import '../interface/media_recorder.dart';
 import '../interface/media_stream.dart';
 import '../interface/media_stream_track.dart';
+import '../interface/multi_party_recorder.dart';
 import '../interface/utils.dart';
 import 'utils.dart';
 
-class MediaRecorderNative extends MediaRecorder {
-  MediaRecorderNative({
-    int fps,
-    bool audioOnly,
-    MediaFormat format,
-    Size videoSize,
-  }) : super(
+class MultiPartyRecorderNative extends MultiPartyRecorder {
+  MultiPartyRecorderNative(
+      {int fps,
+      bool audioOnly,
+      MediaFormat format,
+      Size videoSize,
+      MultiPartyRecorderType type})
+      : super(
             fps: fps,
             audioOnly: audioOnly,
             format: format,
-            videoSize: videoSize) {
+            videoSize: videoSize,
+            type: type) {
     _initialize();
   }
 
-  static MethodChannel _channel = WebRTC.methodChannel();
+  final MethodChannel _channel = WebRTC.methodChannel();
   static final _random = Random();
   final _recorderId = _random.nextInt(0x7FFFFFFF);
   bool running = false;
   bool _isReleased = false;
   StreamSubscription<dynamic> _eventSubscription;
   Completer<void> _creatingCompleter;
-  Map<String, VideoTrackObserver> _videoTrackObservers =
+  final Map<String, VideoTrackObserver> _videoTrackObservers =
       <String, VideoTrackObserver>{};
   String _filePath;
   Future<void> _initialize() async {
@@ -40,14 +42,15 @@ class MediaRecorderNative extends MediaRecorder {
     }
     try {
       _creatingCompleter = Completer<void>();
-      final isInitialized = await _channel.invokeMethod('createMediaRecorder', {
+      final isInitialized =
+          await _channel.invokeMethod('createMultiPartyRecorder', {
         'width': videoSize.width,
         'height': videoSize.height,
-        'type': MediaRecorder.stringFromMediaRecorderType(type),
+        'type': MultiPartyRecorder.stringFromMultiPartyRecorderType(type),
         'audioOnly': audioOnly,
         'fps': fps,
         'recorderId': _recorderId,
-        'format': MediaRecorder.stringFromMediaFormat(format)
+        'format': MultiPartyRecorder.stringFromMediaFormat(format)
       });
       if (!isInitialized) {
         throw RecorderException(
@@ -71,12 +74,13 @@ class MediaRecorderNative extends MediaRecorder {
   }
 
   @override
-  Future<void> addVideoTrack(MediaStreamTrack track) async {
+  Future<void> addTrack(MediaStreamTrack track) async {
     if (!value.isInitialized || _isReleased) {
       return;
     }
     try {
-      final connected = await _channel.invokeMethod('addTrackToMediaRecorder', {
+      final connected =
+          await _channel.invokeMethod('addTrackToMultiPartyRecorder', {
         'trackId': track.id,
         'recorderId': _recorderId,
       });
@@ -94,12 +98,12 @@ class MediaRecorderNative extends MediaRecorder {
   }
 
   @override
-  Future<void> removeVideoTrack(MediaStreamTrack track) async {
+  Future<void> removeTrack(MediaStreamTrack track) async {
     if (!value.isInitialized || _isReleased) {
       return;
     }
     try {
-      await _channel.invokeMethod('removeTrackFromMediaRecorder', {
+      await _channel.invokeMethod('removeTrackFromMultiPartyRecorder', {
         'trackId': track?.id,
         'recorderId': _recorderId,
       });
@@ -114,8 +118,8 @@ class MediaRecorderNative extends MediaRecorder {
     print('value.isPaused is ${value.isPaused}');
     if (!value.isInitialized || _isReleased) {
       throw RecorderException(
-        'Uninitialized MediaRecorder',
-        'resume was called on uninitialized MediaRecorder',
+        'Uninitialized MultiPartyRecorder',
+        'resume was called on uninitialized MultiPartyRecorder',
       );
     }
     if (!value.isRecordingVideo) {
@@ -130,7 +134,7 @@ class MediaRecorderNative extends MediaRecorder {
     try {
       // ignore: prefer_single_quotes
       print("setPaused with $paused");
-      await _channel.invokeMethod('pauseMediaRecorder',
+      await _channel.invokeMethod('pauseMultiPartyRecorder',
           <String, dynamic>{'recorderId': _recorderId, 'paused': paused});
       value = value.copyWith(isPaused: paused);
     } on PlatformException catch (e) {
@@ -143,8 +147,8 @@ class MediaRecorderNative extends MediaRecorder {
     assert(filePath != null);
     if (!value.isInitialized || _isReleased) {
       throw RecorderException(
-        'Uninitialized MediaRecorder',
-        'startVideoRecording was called on uninitialized MediaRecorder',
+        'Uninitialized MultiPartyRecorder',
+        'startVideoRecording was called on uninitialized MultiPartyRecorder',
       );
     }
     if (value.isRecordingVideo) {
@@ -156,7 +160,7 @@ class MediaRecorderNative extends MediaRecorder {
 
     try {
       print('should start media recorder');
-      await _channel.invokeMethod('startMediaRecorder',
+      await _channel.invokeMethod('startMultiPartyRecorder',
           <String, dynamic>{'path': filePath, 'recorderId': _recorderId});
       _filePath = filePath;
       value = value.copyWith(isRecordingVideo: true);
@@ -175,7 +179,7 @@ class MediaRecorderNative extends MediaRecorder {
   /// Stop recording.
 
   @override
-  Future<MediaRecorderMetaData> stop(
+  Future<MultiPartyRecorderMetaData> stop(
       {returnMetaData = false,
       metaDataOptions = const MetaDataOptions(
           isAudioOnly: false,
@@ -184,8 +188,8 @@ class MediaRecorderNative extends MediaRecorder {
           thumbnailQuality: 0.7)}) async {
     if (!value.isInitialized || _isReleased) {
       throw RecorderException(
-        'Uninitialized MediaRecorder',
-        'stopVideoRecording was called on uninitialized MediaRecorder',
+        'Uninitialized MultiPartyRecorder',
+        'stopVideoRecording was called on uninitialized MultiPartyRecorder',
       );
     }
     if (!value.isRecordingVideo) {
@@ -204,11 +208,11 @@ class MediaRecorderNative extends MediaRecorder {
         args['metaDataOptions'] = metaDataOptions?.toMap();
       }
       final result = await _channel.invokeMethod(
-        'stopMediaRecorder',
+        'stopMultiPartyRecorder',
         args,
       );
       if (result != null) {
-        return MediaRecorderMetaData.fromMap(asStringKeyedMap(result))
+        return MultiPartyRecorderMetaData.fromMap(asStringKeyedMap(result))
             .copyWith(url: _filePath);
       }
       return null;
@@ -242,7 +246,7 @@ class MediaRecorderNative extends MediaRecorder {
       await _creatingCompleter.future;
       await _eventSubscription?.cancel();
       await _channel.invokeMethod(
-        'disposeMediaRecorder',
+        'disposeMultiPartyRecorder',
         <String, dynamic>{'recorderId': _recorderId},
       );
     }
@@ -251,7 +255,7 @@ class MediaRecorderNative extends MediaRecorder {
   }
 
   EventChannel _eventChannelFor(int recorderId) {
-    return EventChannel('FlutterWebRTC/mediaRecorderEvents/$recorderId');
+    return EventChannel('FlutterWebRTC/MultiPartyRecorderEvents/$recorderId');
   }
 
   void _listener(dynamic event) {

@@ -25,4 +25,8 @@ class RTCVideoRenderer {
   Future<void> dispose() async {
     return _delegate.dispose();
   }
+    
+  Future<void> release() async {
+    return _delegate.release();
+  }
 }

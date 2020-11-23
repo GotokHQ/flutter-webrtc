@@ -1,5 +1,6 @@
+import 'dart:ui';
+
 import '../flutter_webrtc.dart';
-import 'interface/enums.dart';
 import 'interface/media_recorder.dart' as _interface;
 import 'interface/media_stream.dart';
 import 'interface/media_stream_track.dart';
@@ -10,8 +11,11 @@ class MediaRecorder extends _interface.MediaRecorder {
 
   @override
   Future<void> start(String path,
-          {MediaStreamTrack videoTrack, RecorderAudioChannel audioChannel}) =>
-      _delegate.start(path, videoTrack: videoTrack, audioChannel: audioChannel);
+          {MediaStreamTrack videoTrack,
+          bool audioOnly = false,
+          Size videoSize}) =>
+      _delegate.start(path,
+          videoTrack: videoTrack, audioOnly: audioOnly, videoSize: videoSize);
 
   @override
   Future stop() => _delegate.stop();
@@ -22,5 +26,6 @@ class MediaRecorder extends _interface.MediaRecorder {
     Function(dynamic blob, bool isLastOne) onDataChunk,
     String mimeType,
   }) =>
-      _delegate.startWeb(stream, onDataChunk: onDataChunk, mimeType: mimeType);
+      _delegate.startWeb(stream,
+          onDataChunk: onDataChunk, mimeType: mimeType ?? 'video/webm');
 }

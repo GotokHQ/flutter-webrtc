@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
-enum MediaRecorderType {
+enum MultiPartyRecorderType {
   local,
   mixed,
 }
@@ -14,8 +14,8 @@ enum MediaFormat {
   webm,
 }
 
-class MediaRecorderMetaData {
-  MediaRecorderMetaData(
+class MultiPartyRecorderMetaData {
+  MultiPartyRecorderMetaData(
     this.url, {
     this.thumbnailWidth,
     this.thumbnailHeight,
@@ -28,8 +28,8 @@ class MediaRecorderMetaData {
     this.isAudioOnly,
   });
 
-  factory MediaRecorderMetaData.fromMap(Map<String, dynamic> map) {
-    return MediaRecorderMetaData(
+  factory MultiPartyRecorderMetaData.fromMap(Map<String, dynamic> map) {
+    return MultiPartyRecorderMetaData(
       map['url'],
       thumbnailWidth: map['thumbnailWidth'],
       thumbnailHeight: map['thumbnailHeight'],
@@ -54,7 +54,7 @@ class MediaRecorderMetaData {
   bool isAudioOnly;
   String url;
 
-  MediaRecorderMetaData copyWith(
+  MultiPartyRecorderMetaData copyWith(
       {int thumbnailWidth,
       int thumbnailHeight,
       int videoWidth,
@@ -65,7 +65,7 @@ class MediaRecorderMetaData {
       double frameRate,
       bool isAudioOnly,
       String url}) {
-    return MediaRecorderMetaData(
+    return MultiPartyRecorderMetaData(
       url ?? this.url,
       thumbnailWidth: thumbnailWidth ?? this.thumbnailWidth,
       thumbnailHeight: thumbnailHeight ?? this.thumbnailHeight,
@@ -174,7 +174,7 @@ class RecorderException implements Exception {
   String toString() => '$runtimeType($code, $description)';
 }
 
-/// The state of a [MediaRecorder].
+/// The state of a [MultiPartyRecorder].
 class RecorderValue {
   const RecorderValue({
     this.isInitialized,
@@ -241,15 +241,15 @@ class RecorderValue {
 class VideoTrackObserver {
   VideoTrackObserver(this.recorder, this.track);
   final MediaStreamTrack track;
-  final MediaRecorder recorder;
+  final MultiPartyRecorder recorder;
 }
 
-abstract class MediaRecorder extends ValueNotifier<RecorderValue> {
-  MediaRecorder({
+abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
+  MultiPartyRecorder({
     this.fps = 24,
     this.audioOnly = false,
     this.format = MediaFormat.mpeg4,
-    this.type = MediaRecorderType.local,
+    this.type = MultiPartyRecorderType.local,
     this.videoSize,
   })  : assert(type != null),
         assert(fps != null),
@@ -257,16 +257,16 @@ abstract class MediaRecorder extends ValueNotifier<RecorderValue> {
         assert(audioOnly ? videoSize == null : videoSize != null),
         assert(format != null),
         super(const RecorderValue.uninitialized());
-  final MediaRecorderType type;
+  final MultiPartyRecorderType type;
   final MediaFormat format;
   final Size videoSize;
   final int fps;
   final bool audioOnly;
-  static String stringFromMediaRecorderType(MediaRecorderType type) {
+  static String stringFromMultiPartyRecorderType(MultiPartyRecorderType type) {
     switch (type) {
-      case MediaRecorderType.local:
+      case MultiPartyRecorderType.local:
         return 'local';
-      case MediaRecorderType.mixed:
+      case MultiPartyRecorderType.mixed:
         return 'mixed';
     }
     throw ArgumentError('Unknown ConnectionType value');
@@ -282,18 +282,17 @@ abstract class MediaRecorder extends ValueNotifier<RecorderValue> {
     throw ArgumentError('Unknown ConnectionType value');
   }
 
-  Future<void> addVideoTrack(MediaStreamTrack track);
+  Future<void> addTrack(MediaStreamTrack track);
 
-  Future<void> removeVideoTrack(MediaStreamTrack track);
+  Future<void> removeTrack(MediaStreamTrack track);
 
   Future<void> setPaused(bool paused);
 
   Future<void> start(String filePath);
 
-  void startWeb(
+  Future<void> startWeb(
     MediaStream stream, {
     Function(dynamic blob, bool isLastOne) onDataChunk,
-    String mimeType,
   });
 
   /// Stop recording.

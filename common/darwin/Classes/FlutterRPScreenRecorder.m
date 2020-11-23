@@ -2,56 +2,68 @@
 #if TARGET_OS_IPHONE
 #import <ReplayKit/ReplayKit.h>
 
-//See: https://developer.apple.com/videos/play/wwdc2017/606/
 
 @implementation FlutterRPScreenRecorder {
-	RPScreenRecorder *screenRecorder;
-	RTCVideoSource *source;
+    RPScreenRecorder *screenRecorder;
 }
 
 - (instancetype)initWithDelegate:(__weak id<RTCVideoCapturerDelegate>)delegate {
-    source = delegate;
+    return [self initWithDelegate:delegate samplesInterceptor: nil];
+}
+
+- (instancetype)initWithDelegate:(__weak id<RTCVideoCapturerDelegate>)delegate
+              samplesInterceptor:(__weak id<SamplesInterceptorDelegate>)interceptorDelegate{
+    _samplesInterceptorDelegate = interceptorDelegate;
     return [super initWithDelegate:delegate];
 }
 
--(void)startCapture
+- (void)startCapture:(nullable OnSuccess)onSuccess onError:(nullable OnError)onError
 {
     if(screenRecorder == NULL)
         screenRecorder = [RPScreenRecorder sharedRecorder];
     
-	[screenRecorder setMicrophoneEnabled:NO];
-
-	if (![screenRecorder isAvailable]) {
-		NSLog(@"FlutterRPScreenRecorder.startCapture: Screen recorder is not available!");
-		return;
-	}
-	
-    if (@available(iOS 11.0, *)) {
-        [screenRecorder startCaptureWithHandler:^(CMSampleBufferRef  _Nonnull sampleBuffer, RPSampleBufferType bufferType, NSError * _Nullable error) {
-            if (bufferType == RPSampleBufferTypeVideo) {// We want video only now
-                [self handleSourceBuffer:sampleBuffer sampleType:bufferType];
-            }
-        } completionHandler:^(NSError * _Nullable error) {
-            if (error != nil)
-                NSLog(@"!!! startCaptureWithHandler/completionHandler %@ !!!", error);
-        }];
-    } else {
-        // Fallback on earlier versions
-        NSLog(@"FlutterRPScreenRecorder.startCapture: Screen recorder is not available in versions lower than iOS 11 !");
+    [screenRecorder setMicrophoneEnabled:NO];
+    
+    if (![screenRecorder isAvailable]) {
+        if (onError) {
+            onError(@"Screen recorder is not available!", @"");
+        }
+        return;
     }
+    
+    [screenRecorder startCaptureWithHandler:^(CMSampleBufferRef  _Nonnull sampleBuffer, RPSampleBufferType bufferType, NSError * _Nullable error) {
+        NSLog(@"startCaptureWithHandler");
+        if (bufferType == RPSampleBufferTypeVideo) {// We want video only now
+            NSLog(@"RPSampleBufferTypeVideo");
+            [self handleSourceBuffer:sampleBuffer sampleType:bufferType];
+        }
+    } completionHandler:^(NSError * _Nullable error) {
+        if (error != nil) {
+            if (onError) {
+                onError(@"!!! startCaptureWithHandler/completionHandler %@ !!!", error.localizedDescription);
+            }
+            return;
+        }
+        if (onSuccess) {
+            NSLog(@"Screen Capture success");
+            onSuccess();
+        }
+    }];
 }
 
--(void)stopCapture
+- (void)stopCapture:(nullable  OnSuccess)onSuccess onError:(nullable OnError)onError;
 {
-    if (@available(iOS 11.0, *)) {
-        [screenRecorder stopCaptureWithHandler:^(NSError * _Nullable error) {
-            if (error != nil)
-                NSLog(@"!!! stopCaptureWithHandler/completionHandler %@ !!!", error);
-        }];
-    } else {
-        // Fallback on earlier versions
-        NSLog(@"FlutterRPScreenRecorder.stopCapture: Screen recorder is not available in versions lower than iOS 11 !");
-    }
+    [screenRecorder stopCaptureWithHandler:^(NSError * _Nullable error) {
+        if (error != nil) {
+            if (onError) {
+                onError(@"!!! stopCaptureWithHandler/completionHandler %@ !!!", error.localizedDescription);
+            }
+            return;
+        }
+        if (onSuccess) {
+            onSuccess();
+        }
+    }];
 }
 
 -(void)handleSourceBuffer:(CMSampleBufferRef)sampleBuffer sampleType:(RPSampleBufferType)sampleType
@@ -61,6 +73,7 @@
         return;
     }
     
+    
     CVPixelBufferRef pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer);
     if (pixelBuffer == nil) {
         return;
@@ -68,8 +81,9 @@
     
     size_t width = CVPixelBufferGetWidth(pixelBuffer);
     size_t height = CVPixelBufferGetHeight(pixelBuffer);
-
-    [source adaptOutputFormatToWidth:(int)(width/2) height:(int)(height/2) fps:8];
+    NSLog(@"got pixel buffer, width=%ld, height=%ld", width, height);
+    //
+    //    [source adaptOutputFormatToWidth:width/2 height:height/2 fps:8];
     
     RTCCVPixelBuffer *rtcPixelBuffer = [[RTCCVPixelBuffer alloc] initWithPixelBuffer:pixelBuffer];
     int64_t timeStampNs =
@@ -81,4 +95,5 @@
 }
 
 @end
+
 #endif

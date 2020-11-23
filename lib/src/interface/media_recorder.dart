@@ -1,15 +1,13 @@
-import 'enums.dart';
+import 'dart:ui';
+
 import 'media_stream.dart';
 import 'media_stream_track.dart';
 
 abstract class MediaRecorder {
   /// For Android use audioChannel param
   /// For iOS use audioTrack
-  Future<void> start(
-    String path, {
-    MediaStreamTrack videoTrack,
-    RecorderAudioChannel audioChannel,
-  });
+  Future<void> start(String path,
+      {MediaStreamTrack videoTrack, bool audioOnly = false, Size videoSize});
 
   /// Only for Flutter Web
   void startWeb(

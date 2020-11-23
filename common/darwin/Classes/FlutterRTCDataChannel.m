@@ -130,10 +130,14 @@
 // Called when the data channel state has changed.
 - (void)dataChannelDidChangeState:(RTCDataChannel*)channel
 {
+    NSNumber* channelId = channel.flutterChannelId;
+    if (!channel.flutterChannelId) {
+        channelId = [NSNumber numberWithInt:channel.channelId];
+    }
     FlutterEventSink eventSink = channel.eventSink;
     if(eventSink) {
         eventSink(@{ @"event" : @"dataChannelStateChanged",
-                     @"id": channel.flutterChannelId,
+                     @"id": channelId,
                      @"state": [self stringForDataChannelState:channel.readyState]});
     }
 }
@@ -152,10 +156,14 @@
                                      encoding:NSUTF8StringEncoding];
     }
 
+    NSNumber* channelId = channel.flutterChannelId;
+    if (!channel.flutterChannelId) {
+        channelId = [NSNumber numberWithInt:channel.channelId];
+    }
     FlutterEventSink eventSink = channel.eventSink;
     if(eventSink) {
         eventSink(@{ @"event" : @"dataChannelReceiveMessage",
-                     @"id": channel.flutterChannelId,
+                     @"id": channelId,
                      @"type": type,
                      @"data": (data ? data : [NSNull null])});
     }

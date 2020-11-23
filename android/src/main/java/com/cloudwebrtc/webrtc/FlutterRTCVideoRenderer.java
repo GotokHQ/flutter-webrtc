@@ -109,7 +109,7 @@ public class FlutterRTCVideoRenderer implements EventChannel.StreamHandler, GetU
         }
     };
     private boolean disposed = false;
-    private boolean isPaused = false;
+    private boolean mute = false;
     private SurfaceTextureRenderer surfaceTextureRenderer;
     private TextureRegistry.SurfaceTextureEntry entry;
 
@@ -296,26 +296,22 @@ public class FlutterRTCVideoRenderer implements EventChannel.StreamHandler, GetU
         return videoTrack;
     }
 
-    public void resume() {
-        if (!isPaused) {
+    public void mute(boolean mute, final MethodChannel.Result result) {
+        if (this.mute == mute) {
+            result.success(null);
             return;
         }
-        isPaused = false;
+        this.mute = mute;
         if (surfaceTextureRenderer != null && videoTrack != null) {
-            videoTrack.addSink(surfaceTextureRenderer);
+            if (this.mute) {
+                videoTrack.removeSink(surfaceTextureRenderer);
+            } else {
+                videoTrack.addSink(surfaceTextureRenderer);
+            }
+            surfaceTextureRenderer.setBlur(this.mute);
         }
     }
-
-    public void pause() {
-        if (isPaused) {
-            return;
-        }
-        isPaused = true;
-        if (surfaceTextureRenderer != null && videoTrack != null) {
-            videoTrack.removeSink(surfaceTextureRenderer);
-        }
-    }
-
+    
     public void blur(boolean blur, final MethodChannel.Result result) {
         if (surfaceTextureRenderer != null) {
             surfaceTextureRenderer.setBlur(blur);

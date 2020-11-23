@@ -78,7 +78,7 @@ class MediaStreamTrackNative extends MediaStreamTrack {
       );
 
   @override
-  void setVolume(double volume) async {
+  Future<void> setVolume(double volume) async {
     await _channel.invokeMethod(
       'setVolume',
       <String, dynamic>{'trackId': value.id, 'volume': volume},

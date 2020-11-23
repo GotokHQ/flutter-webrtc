@@ -31,6 +31,10 @@
                        peerConnection:(nonnull RTCPeerConnection *)peerConnection
                                result:(nonnull FlutterResult)result;
 
+-(void) peerConnectionRemoveICECandidates:(nonnull NSArray<RTCIceCandidate*>*)candidates
+                       peerConnection:(nonnull RTCPeerConnection *)peerConnection
+                               result:(nonnull FlutterResult)result;
+
 -(void) peerConnectionGetStats:(nonnull NSString *)trackID
                 peerConnection:(nonnull RTCPeerConnection *)peerConnection
                         result:(nonnull FlutterResult)result;

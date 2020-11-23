@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 
 import '../interface/enums.dart';
 import '../interface/media_recorder.dart';
@@ -13,22 +14,25 @@ class MediaRecorderNative extends MediaRecorder {
 
   @override
   Future<void> start(String path,
-      {MediaStreamTrack videoTrack, RecorderAudioChannel audioChannel
+      {MediaStreamTrack videoTrack, bool audioOnly = false, Size videoSize
       // TODO(cloudwebrtc): add codec/quality options
       }) async {
+    assert(audioOnly != null);
     if (path == null) {
       throw ArgumentError.notNull('path');
     }
 
-    if (audioChannel == null && videoTrack == null) {
+    if (!audioOnly && videoTrack == null) {
       throw Exception('Neither audio nor video track were provided');
     }
 
     await WebRTC.methodChannel().invokeMethod('startRecordToFile', {
       'path': path,
-      'audioChannel': audioChannel?.index,
+      'audioOnly': audioOnly,
       'videoTrackId': videoTrack?.id,
-      'recorderId': _recorderId
+      'recorderId': _recorderId,
+      'width': videoSize?.width ?? 0,
+      'height': videoSize?.height ?? 0,
     });
   }
 

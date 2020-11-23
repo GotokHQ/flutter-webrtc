@@ -1,50 +1,125 @@
+import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'media_stream.dart';
+
+class RTCVideoAppLifeCycleObserver extends Object with WidgetsBindingObserver {
+  RTCVideoAppLifeCycleObserver(this._controller);
+
+  final VideoRenderer _controller;
+
+  void initialize() {
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+        _controller.muted = true;
+        break;
+      case AppLifecycleState.resumed:
+        _controller.muted = false;
+        break;
+      default:
+    }
+  }
+
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+  }
+}
 
 @immutable
 class RTCVideoValue {
-  const RTCVideoValue({
-    this.width = 0.0,
-    this.height = 0.0,
+  RTCVideoValue({
+    @required this.size,
     this.rotation = 0,
+    this.errorDescription,
+    this.firstFrameRendered,
+    this.isMirrored,
+    this.isBlurred = false,
+    this.mute = true,
     this.renderVideo = false,
   });
-  static const RTCVideoValue empty = RTCVideoValue();
-  final double width;
-  final double height;
+
+  RTCVideoValue.uninitialized() : this(size: null);
+
+  RTCVideoValue.erroneous(String errorDescription)
+      : this(size: null, errorDescription: errorDescription);
+
   final int rotation;
+  final bool firstFrameRendered;
+  final bool isMirrored;
+  final bool isBlurred;
+  final bool mute;
+  final String errorDescription;
   final bool renderVideo;
+
+  final Size size;
+
+  bool get initialized => size != null;
+  bool get hasError => errorDescription != null;
+
   double get aspectRatio {
-    if (width == 0.0 || height == 0.0) {
+    if (size == null || size.width == 0 || size.height == 0) {
       return 1.0;
     }
     return (rotation == 90 || rotation == 270)
-        ? height / width
-        : width / height;
+        ? size.height / size.width
+        : size.width / size.height;
   }
 
+  @override
+  int get hashCode => hashValues(
+      rotation, firstFrameRendered, isMirrored, errorDescription, size, mute);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is RTCVideoValue &&
+          runtimeType == other.runtimeType &&
+          hashCode == other.hashCode;
+
   RTCVideoValue copyWith({
-    double width,
-    double height,
+    Size size,
     int rotation,
+    bool firstFrameRendered,
+    String errorDescription,
+    bool isMirrored,
+    bool mute,
+    bool isBlurred,
     bool renderVideo,
   }) {
     return RTCVideoValue(
-      width: width ?? this.width,
-      height: height ?? this.height,
+      size: size ?? this.size,
       rotation: rotation ?? this.rotation,
-      renderVideo: (this.width != 0 && this.height != 0 && renderVideo) ??
-          this.renderVideo,
+      firstFrameRendered: firstFrameRendered ?? this.firstFrameRendered,
+      errorDescription: errorDescription ?? this.errorDescription,
+      isMirrored: isMirrored ?? this.isMirrored,
+      mute: mute ?? this.mute,
+      isBlurred: isBlurred ?? this.isBlurred,
+      renderVideo: renderVideo ?? this.renderVideo,
     );
   }
 
   @override
-  String toString() =>
-      '$runtimeType(width: $width, height: $height, rotation: $rotation)';
+  String toString() {
+    return '$runtimeType('
+        'size: $size, '
+        'rotation: $rotation, '
+        'firstFrameRendered: $firstFrameRendered, '
+        'isMirrored: $isMirrored, '
+        'mute: $mute, '
+        'isBlurred: $isBlurred, '
+        'renderVideo: $renderVideo, '
+        'errorDescription: $errorDescription)';
+  }
 }
 
 abstract class VideoRenderer extends ValueNotifier<RTCVideoValue> {
-  VideoRenderer() : super(RTCVideoValue.empty);
+  VideoRenderer() : super(RTCVideoValue.uninitialized());
 
   bool get muted;
   set muted(bool mute);
@@ -57,10 +132,15 @@ abstract class VideoRenderer extends ValueNotifier<RTCVideoValue> {
   MediaStream get srcObject;
   set srcObject(MediaStream stream);
 
+  bool get blurred;
+  set blurred(bool blur);
+
   @override
   @mustCallSuper
   Future<void> dispose() async {
     super.dispose();
     return Future.value();
   }
+
+  Future<void> release();
 }

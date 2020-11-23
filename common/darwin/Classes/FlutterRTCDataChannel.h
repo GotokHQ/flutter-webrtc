@@ -1,5 +1,4 @@
 #import "FlutterWebRTCPlugin.h"
-#import <WebRTC/RTCDataChannel.h>
 
 @interface RTCDataChannel (Flutter) <FlutterStreamHandler>
 @property (nonatomic, strong, nonnull) NSString *peerConnectionId;

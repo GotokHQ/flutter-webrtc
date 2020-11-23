@@ -101,6 +101,28 @@ class RTCRtpEncoding {
   /// Can't be changed between getParameters/setParameters.
   int ssrc;
 
+  RTCRtpEncoding copyWith({
+    String rid,
+    bool active,
+    int maxBitrateBps,
+    int minBitrateBps,
+    int maxFramerate,
+    int numTemporalLayers,
+    double scaleResolutionDownBy,
+    int ssrc,
+  }) {
+    return RTCRtpEncoding(
+      rid: rid ?? this.rid,
+      active: active ?? this.active,
+      maxBitrateBps: maxBitrateBps ?? this.maxBitrateBps,
+      minBitrateBps: minBitrateBps ?? this.minBitrateBps,
+      numTemporalLayers: numTemporalLayers ?? this.numTemporalLayers,
+      scaleResolutionDownBy:
+          scaleResolutionDownBy ?? this.scaleResolutionDownBy,
+      ssrc: ssrc ?? this.ssrc,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       if (rid != null) 'rid': rid,
@@ -178,6 +200,22 @@ class RTCRtpParameters {
   /// setParameters. Though in the future it will be possible to reorder them or
   /// remove them.
   List<RTCRTPCodec> codecs;
+
+  RTCRtpParameters copyWith({
+    String transactionId,
+    List<RTCHeaderExtension> headerExtensions,
+    List<RTCRtpEncoding> encodings,
+    List<RTCRTPCodec> codecs,
+    RTCRTCPParameters rtcp,
+  }) {
+    return RTCRtpParameters(
+      transactionId ?? this.transactionId,
+      rtcp ?? this.rtcp,
+      headerExtensions ?? this.headerExtensions,
+      encodings ?? this.encodings,
+      codecs ?? this.codecs,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     var headerExtensionsList = <dynamic>[];

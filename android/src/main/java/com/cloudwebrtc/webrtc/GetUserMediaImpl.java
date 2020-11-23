@@ -40,6 +40,7 @@ import com.cloudwebrtc.webrtc.record.AudioChannel;
 import com.cloudwebrtc.webrtc.record.AudioSamplesInterceptor;
 import com.cloudwebrtc.webrtc.record.MediaRecorderImpl;
 import com.cloudwebrtc.webrtc.record.OutputAudioSamplesInterceptor;
+import com.cloudwebrtc.webrtc.record.RTCRecorder;
 import com.cloudwebrtc.webrtc.utils.Callback;
 import com.cloudwebrtc.webrtc.utils.ConstraintsArray;
 import com.cloudwebrtc.webrtc.utils.ConstraintsMap;

@@ -3,16 +3,32 @@
 #import "FlutterRTCMediaStream.h"
 #import "FlutterRTCDataChannel.h"
 #import "FlutterRTCVideoRenderer.h"
+#import "MediaRecorder.h"
+#import "FlutterRTCVideoRecorder.h"
+#import "FlutterRecorder.h"
+#import "FlutterWebRTCPlugin.h"
+#import "FlutterRTCVideoSource.h"
+#import "FlutterVideoCapturer.h"
+#import "SamplesInterceptor.h"
+#import "FlutterAudioMixer.h"
 
 #import <AVFoundation/AVFoundation.h>
 #import <WebRTC/WebRTC.h>
 
+void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
+{
+    dispatch_async(queue, block);
+}
+
+
 @implementation FlutterWebRTCPlugin {
     FlutterMethodChannel *_methodChannel;
+    SamplesInterceptor *_audioSamplesInterceptor;
     id _registry;
     id _messenger;
     id _textures;
     BOOL _speakerOn;
+    FlutterAudioMixer *_audioMixerDevice;
 }
 
 @synthesize messenger = _messenger;
@@ -54,20 +70,40 @@
 #if TARGET_OS_IPHONE
         self.viewController = viewController;
 #endif
+        _dispatchQueue = dispatch_queue_create("cloudwebrtc.com/WebRTC.Queue", NULL);
+        _cameraListeners = [NSHashTable hashTableWithOptions:NSPointerFunctionsWeakMemory | NSPointerFunctionsOpaquePersonality];
     }
     //RTCSetMinDebugLogLevel(RTCLoggingSeverityVerbose);
     RTCDefaultVideoDecoderFactory *decoderFactory = [[RTCDefaultVideoDecoderFactory alloc] init];
     RTCDefaultVideoEncoderFactory *encoderFactory = [[RTCDefaultVideoEncoderFactory alloc] init];
     
-    _peerConnectionFactory = [[RTCPeerConnectionFactory alloc]
-                              initWithEncoderFactory:encoderFactory
-                              decoderFactory:decoderFactory];
+//    _peerConnectionFactory = [[RTCPeerConnectionFactory alloc]
+//                              initWithEncoderFactory:encoderFactory
+//                              decoderFactory:decoderFactory];
     
+    _audioMixerDevice = [[FlutterAudioMixer alloc] init];
+    RCPeerConnectionFactoryBuilder *builder = [[RCPeerConnectionFactoryBuilder alloc] init];
+    [builder setAudioDeviceModule:_audioMixerDevice.adm];
+    [builder setVideoEncoderFactory:encoderFactory];
+    [builder setVideoDecoderFactory:decoderFactory];
+    _peerConnectionFactory = [builder createPeerConnectionFactory];
     
     self.peerConnections = [NSMutableDictionary new];
     self.localStreams = [NSMutableDictionary new];
     self.localTracks = [NSMutableDictionary new];
     self.renders = [[NSMutableDictionary alloc] init];
+    _audioSamplesInterceptor = [[SamplesInterceptor alloc] init];
+    
+    RTCAudioSessionConfiguration *webRTCConfig =
+    [RTCAudioSessionConfiguration webRTCConfiguration];
+    webRTCConfig.categoryOptions = webRTCConfig.categoryOptions |
+    AVAudioSessionCategoryOptionDefaultToSpeaker;
+    [RTCAudioSessionConfiguration setWebRTCConfiguration:webRTCConfig];
+    
+    
+    RTCAudioSession *session = [RTCAudioSession sharedInstance];
+    [session addDelegate:self];
+    
 #if TARGET_OS_IPHONE
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(didSessionRouteChange:) name:AVAudioSessionRouteChangeNotification object:nil];
 #endif
@@ -91,6 +127,23 @@
       break;
   }
 #endif
+}
+
+#pragma mark - RTCAudioSessionDelegate
+
+- (void)audioSessionDidStartPlayOrRecord:(RTCAudioSession *)session {
+    [RTCDispatcher dispatchAsyncOnType:RTCDispatcherTypeMain
+                                 block:^{
+        NSLog(@"audioSessionDidStartPlayOrRecord");
+        session.isAudioEnabled = YES;
+    }];
+}
+
+- (void)audioSessionDidStopPlayOrRecord:(RTCAudioSession *)session {
+    [RTCDispatcher dispatchAsyncOnType:RTCDispatcherTypeMain
+                                 block:^{
+        NSLog(@"audioSessionDidStopPlayOrRecord");
+    }];
 }
 
 - (void)handleMethodCall:(FlutterMethodCall*)call result:(FlutterResult) result {
@@ -348,14 +401,11 @@
             for (RTCVideoTrack *track in stream.videoTracks) {
                 [self.localTracks removeObjectForKey:track.trackId];
                 RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
-                RTCVideoSource *source = videoTrack.source;
-                if(source){
-                    [self.videoCapturer stopCapture];
-                    self.videoCapturer = nil;
-                }
+                [self mediaStreamTrackDispose:videoTrack];
             }
             for (RTCAudioTrack *track in stream.audioTracks) {
                 [self.localTracks removeObjectForKey:track.trackId];
+                [self mediaStreamTrackDispose:track];
             }
             [self.localStreams removeObjectForKey:streamId];
         }
@@ -392,6 +442,45 @@
             result([FlutterError errorWithCode:@"mediaStreamAddTrack: Stream is nil" message:nil details:nil]);
         }
         result(nil);
+    } else if([@"mediaStreamTrackRestartCamera" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackRestartCamera:track result:result];
+            return;
+        }
+        result(nil);
+    } else if([@"mediaStreamTrackStop" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackStop:track result:result];
+            return;
+        }
+        result(nil);
+    } else if([@"mediaStreamTrackStart" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackStart:track result:result];
+            return;
+        }
+        result(nil);
+    } else if([@"mediaStreamTrackAdaptOutputFormat" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        NSNumber* width = argsMap[@"width"];
+        NSNumber* height = argsMap[@"height"];
+        NSNumber* frameRate = argsMap[@"frameRate"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackAdaptOutputFormat:track width:[width intValue] height:[height intValue] frameRate:[frameRate intValue] result:result];
+            return;
+        }
+        result(nil);
     } else if ([@"mediaStreamRemoveTrack" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* streamId = argsMap[@"streamId"];
@@ -417,7 +506,8 @@
     } else if ([@"trackDispose" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* trackId = argsMap[@"trackId"];
-        [self.localTracks removeObjectForKey:trackId];
+        RTCMediaStreamTrack *track = [self trackForId:trackId];
+        [self mediaStreamTrackDispose:track];
         result(nil);
     } else if ([@"peerConnectionClose" isEqualToString:call.method] || [@"peerConnectionDispose" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
@@ -443,14 +533,15 @@
         }
         result(nil);
     } else if ([@"createVideoRenderer" isEqualToString:call.method]){
-        FlutterRTCVideoRenderer* render = [self createWithTextureRegistry:_textures
-                                          messenger:_messenger];
+        NSLog(@"createVideoRenderer_native");
+        FlutterRTCVideoRenderer* render = [self createWithTextureRegistry:_textures];
         self.renders[@(render.textureId)] = render;
         result(@{@"textureId": @(render.textureId)});
     } else if ([@"videoRendererDispose" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSNumber *textureId = argsMap[@"textureId"];
         FlutterRTCVideoRenderer *render = self.renders[textureId];
+        [self removeCameraListener:(id<CameraSwitchObserver>)render];
         render.videoTrack = nil;
         [render dispose];
         [self.renders removeObjectForKey:textureId];
@@ -482,7 +573,29 @@
         }
         [self rendererSetSrcObject:render stream:videoTrack];
         result(nil);
-    } else if ([@"mediaStreamTrackHasTorch" isEqualToString:call.method]) {
+    } else if ([@"videoRendererSetMuted" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *textureId = argsMap[@"textureId"];
+        NSNumber *mute  = argsMap[@"mute"];
+        NSLog(@"mute %@", mute);
+        BOOL isMute = [mute boolValue];
+        FlutterRTCVideoRenderer *render = self.renders[textureId];
+        if(render){
+            render.mute = isMute;
+        }
+        result(nil);
+    } else if ([@"videoRendererSetBlurred" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *textureId = argsMap[@"textureId"];
+        NSNumber *blur  = argsMap[@"blur"];
+        NSLog(@"blur %@", blur);
+        BOOL isBlur = [blur boolValue];
+        FlutterRTCVideoRenderer *render = self.renders[textureId];
+        if(render){
+            render.blur = isBlur;
+        }
+        result(nil);
+    }  else if ([@"mediaStreamTrackHasTorch" isEqualToString:call.method]) {
         NSDictionary* argsMap = call.arguments;
         NSString* trackId = argsMap[@"trackId"];
         RTCMediaStreamTrack *track = self.localTracks[trackId];
@@ -515,16 +628,50 @@
         NSDictionary* argsMap = call.arguments;
         NSString* trackId = argsMap[@"trackId"];
         RTCMediaStreamTrack *track = self.localTracks[trackId];
-        if (track != nil && [track isKindOfClass:[RTCVideoTrack class]]) {
-            RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
-            [self mediaStreamTrackSwitchCamera:videoTrack result:result];
-        } else {
-            if (track == nil) {
-                result([FlutterError errorWithCode:@"Track is nil" message:nil details:nil]);
-            } else {
-                result([FlutterError errorWithCode:[@"Track is class of " stringByAppendingString:[[track class] description]] message:nil details:nil]);
-            }
+        if(track != nil){
+            [self mediaStreamTrackSwitchCamera:track result:result];
+            return;
         }
+        result(nil);
+    } else if ([@"mediaStreamTrackAdaptOutputFormat" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        NSNumber* width = argsMap[@"width"];
+        NSNumber* height = argsMap[@"height"];
+        NSNumber* frameRate = argsMap[@"frameRate"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackAdaptOutputFormat:track width:[width intValue] height:[height intValue] frameRate:[frameRate intValue] result:result];
+            return;
+        }
+        result(nil);
+    } else if ([@"mediaStreamTrackRestartCamera" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackRestartCamera:track result:result];
+            return;
+        }
+        result(nil);
+    } else if ([@"mediaStreamTrackStart" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackStart:track result:result];
+            return;
+        }
+        result(nil);
+    } else if ([@"mediaStreamTrackStop" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString* trackId = argsMap[@"trackId"];
+        RTCMediaStreamTrack *track = self.localTracks[trackId];
+        if(track != nil){
+            [self mediaStreamTrackStop:track result:result];
+            return;
+        }
+        result(nil);
     } else if ([@"setVolume" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* trackId = argsMap[@"trackId"];
@@ -551,12 +698,39 @@
         NSDictionary* argsMap = call.arguments;
         NSNumber* enable = argsMap[@"enable"];
         _speakerOn = enable.boolValue;
-        AVAudioSession *audioSession = [AVAudioSession sharedInstance];
-        [audioSession setCategory:AVAudioSessionCategoryPlayAndRecord
-                      withOptions:_speakerOn ? AVAudioSessionCategoryOptionDefaultToSpeaker : 0
-                            error:nil];
-        [audioSession setActive:YES error:nil];
-        result(nil);
+        [RTCDispatcher dispatchAsyncOnType:RTCDispatcherTypeMain
+                                     block:^{
+            RTCAudioSession *session = [RTCAudioSession sharedInstance];
+            
+            BOOL hasSucceeded = NO;
+            NSError *error = nil;
+            
+            [session lockForConfiguration];
+            RTCAudioSessionConfiguration *webRTCConfig =
+            [RTCAudioSessionConfiguration webRTCConfiguration];
+            RTCAudioSessionConfiguration *configuration =
+                [[RTCAudioSessionConfiguration alloc] init];
+            configuration.category = webRTCConfig.category;
+            configuration.categoryOptions = AVAudioSessionCategoryOptionAllowBluetooth |
+            enable.boolValue ? AVAudioSessionCategoryOptionDefaultToSpeaker : 0;
+            configuration.mode = webRTCConfig.mode;
+
+            if (session.isActive) {
+              hasSucceeded = [session setConfiguration:configuration error:&error];
+            } else {
+              hasSucceeded = [session setConfiguration:configuration
+                                                active:YES
+                                                 error:&error];
+            }
+            [session unlockForConfiguration];
+            if (!hasSucceeded) {
+                result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
+                                           message:[NSString stringWithFormat:@"Error setting configuration: %@", error.localizedDescription]
+                                           details:nil]);
+                return;
+            }
+            result(nil);
+        }];
 #else
         result(FlutterMethodNotImplemented);
 #endif
@@ -599,47 +773,6 @@
                                            message:[NSString stringWithFormat:@"Error: peerConnection not found!"]
                                            details:nil]);
         }
-    } else if ([@"createSender" isEqualToString:call.method]){
-        NSDictionary* argsMap = call.arguments;
-        NSString* peerConnectionId = argsMap[@"peerConnectionId"];
-        NSString* kind = argsMap[@"kind"];
-        NSString* streamId = argsMap[@"streamId"];
-        RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
-        if(peerConnection == nil) {
-            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
-            message:[NSString stringWithFormat:@"Error: peerConnection not found!"]
-            details:nil]);
-            return;
-        }
-        RTCRtpSender* sender = [peerConnection senderWithKind:kind streamId:streamId];
-        result([self rtpSenderToMap:sender]);
-    } else if ([@"closeSender" isEqualToString:call.method]){
-        NSDictionary* argsMap = call.arguments;
-        NSString* peerConnectionId = argsMap[@"peerConnectionId"];
-        NSString* senderId = argsMap[@"senderId"];
-        RTCPeerConnection *peerConnection = self.peerConnections[peerConnectionId];
-        if(peerConnection == nil) {
-            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
-            message:[NSString stringWithFormat:@"Error: peerConnection not found!"]
-            details:nil]);
-            return;
-        }
-        RTCRtpSender *sender = [self getRtpSenderById:peerConnection Id:senderId];
-        if(sender == nil) {
-            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
-            message:[NSString stringWithFormat:@"Error: sender not found!"]
-            details:nil]);
-            return;
-        }
-        
-        if(![peerConnection removeTrack:sender]) {
-            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
-            message:[NSString stringWithFormat:@"Error: can't close sender!"]
-            details:nil]);
-            return;
-        }
-        
-        result(nil);
     } else if ([@"addTrack" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString* peerConnectionId = argsMap[@"peerConnectionId"];
@@ -893,7 +1026,170 @@
         }
         [peerConnection removeTrack:sender];
         result(nil);
-    }  else {
+    } else if ([@"startRecordToFile" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString *path = argsMap[@"path"];
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        CGFloat width = [argsMap[@"width"] floatValue];
+        CGFloat height = [argsMap[@"height"] floatValue];
+        NSString *trackId = argsMap[@"videoTrackId"];
+        NSString *type = argsMap[@"type"];
+        CGSize size = CGSizeMake(width, height);
+        NSNumber *audioOnly = argsMap[@"audioOnly"];
+        BOOL isAudioOnly = [audioOnly boolValue];
+        BOOL isRemote = NO;
+        RTCMediaStreamTrack *track = _localTracks[trackId];
+        if ((!track  || ![track isKindOfClass:[RTCVideoTrack class]]) && !isAudioOnly) {
+            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
+                                       message:@"No track"
+                                       details:nil]);
+            return;
+        }
+        id<FlutterRecorder> recorder = (id<FlutterRecorder>)[[MediaRecorder alloc] initWithRecorderId:recorderId videoSize:size samplesInterceptor:_audioSamplesInterceptor messenger:_messenger audioOnly:isAudioOnly];
+        if (track){
+            RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
+            [recorder addVideoTrack:videoTrack isRemote:isRemote label:@"local"];
+            NSLog(@"Successfully Added video track:%@ to recorder:%@", trackId, recorderId);
+        }
+        [self addCameraListener:recorder];
+        self.mediaRecorders[recorderId] = recorder;
+        [recorder startVideoRecordingAtPath:path result:result];
+        NSLog(@"recorder: %@", recorder);
+        NSLog(@"recorder type: %@", type);
+    } else if ([@"stopRecordToFile" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        [self removeCameraListener:recorder];
+        [recorder stopVideoRecordingWithResult:result];
+    } else if ([@"createMultiPartyRecorder" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        CGFloat width = [argsMap[@"width"] floatValue];
+        CGFloat height = [argsMap[@"height"] floatValue];
+        int fps = [argsMap[@"fps"] intValue];
+        NSString *type = argsMap[@"type"];
+        CGSize size = CGSizeMake(width, height);
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        NSNumber *audioOnly = argsMap[@"audioOnly"];
+        BOOL isAudioOnly = [audioOnly boolValue];
+        id<FlutterRecorder> recorder;
+        if ([type isEqualToString:@"local"]) {
+            recorder = (id<FlutterRecorder>)[[MediaRecorder alloc] initWithRecorderId:recorderId videoSize:size samplesInterceptor:_audioSamplesInterceptor messenger:_messenger audioOnly:isAudioOnly];
+        } else if ([type isEqualToString:@"mixed"]) {
+            recorder = (id<FlutterRecorder>)[[FlutterRTCVideoRecorder alloc] initWithRecorderId:recorderId videoSize:size framesPerSecond:fps messenger:_messenger  audioOnly:isAudioOnly];
+            [_audioMixerDevice addAudioSamplesInterceptor:(id<SamplesInterceptorDelegate>)recorder];
+        } else {
+            result([FlutterError errorWithCode:[NSString stringWithFormat:@"%@Failed",call.method]
+                                       message:[NSString stringWithFormat:@"Error: unknown recorder type!"]
+                                       details:nil]);
+            return;
+        }
+        [self addCameraListener:recorder];
+        NSLog(@"recorder: %@", recorder);
+        NSLog(@"recorder type: %@", type);
+        self.mediaRecorders[recorderId] = recorder;
+        result(@YES);
+    } else if([@"addTrackToMultiPartyRecorder" isEqualToString:call.method]){
+        NSLog(@"addTrackToMediaRecorder called");
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        NSString *trackId = argsMap[@"trackId"];
+        NSString *label = argsMap[@"label"];
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        BOOL isRemote = NO;
+        RTCMediaStreamTrack *track = _localTracks[trackId];
+        if (!track) {
+            track = [self trackForId:trackId];
+            isRemote = YES;
+        }
+        if ([track isKindOfClass:[RTCVideoTrack class]]){
+            RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
+            [recorder addVideoTrack:videoTrack isRemote:isRemote label:label];
+            NSLog(@"Successfully Added video track:%@ to recorder:%@", trackId, recorderId);
+        }
+        result(@YES);
+    } else if([@"removeTrackFromMultiPartyRecorder" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        NSString *trackId = argsMap[@"trackId"];
+        NSString *label = argsMap[@"label"];
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        if (trackId) {
+            RTCMediaStreamTrack *track = _localTracks[trackId];
+            BOOL isRemote = NO;
+            if (!track) {
+                track = [self trackForId:trackId];
+                isRemote = YES;
+            }
+            if ([track isKindOfClass:[RTCVideoTrack class]]){
+                RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
+                [recorder removeVideoTrack:videoTrack isRemote:isRemote label:label];
+                NSLog(@"Successfully Removed video track:%@ to recorder:%@", trackId, recorderId);
+                result(@YES);
+            }
+        } else {
+            [recorder removeVideoTrack:nil isRemote:NO label:nil];
+            NSLog(@"Done Removing nil track");
+        }
+    } else if([@"pauseMultiPartyRecorder" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        NSLog(@"pauseMediaRecorder %@", recorderId);
+        NSNumber *paused  = argsMap[@"paused"];
+        NSLog(@"pausedn %@", paused);
+        BOOL isPause = [paused boolValue];
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        [recorder setPaused:isPause];
+        result(nil);
+    } else if([@"addTrackToMediaRecorder" isEqualToString:call.method]){
+        NSLog(@"addTrackToMediaRecorder called");
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        NSString *trackId = argsMap[@"trackId"];
+        NSString *label = argsMap[@"label"];
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        BOOL isRemote = NO;
+        RTCMediaStreamTrack *track = _localTracks[trackId];
+        if (!track) {
+            track = [self trackForId:trackId];
+            isRemote = YES;
+        }
+        if ([track isKindOfClass:[RTCVideoTrack class]]){
+            RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
+            [recorder addVideoTrack:videoTrack isRemote:isRemote label:label];
+            NSLog(@"Successfully Added video track:%@ to recorder:%@", trackId, recorderId);
+            result(@YES);
+        }
+    } else if([@"startMultiPartyRecorder" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSString *path = argsMap[@"path"];
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        NSLog(@"startMediaRecorder called");
+        NSLog(@"recorderId %@", recorderId);
+        NSLog(@"path %@", path);
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        if (!recorder) {
+            NSLog(@"Did not find a recorder with recorderId %@", recorderId);
+        }
+        [recorder startVideoRecordingAtPath:path result:result];
+    } else if([@"stopMultiPartyRecorder" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        [recorder stopVideoRecordingWithResult:result];
+    } else if([@"disposeMultiPartyRecorder" isEqualToString:call.method]){
+        NSDictionary* argsMap = call.arguments;
+        NSNumber *recorderId = argsMap[@"recorderId"];
+        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        [self->_audioSamplesInterceptor removeSampleInterceptor:(id<SamplesInterceptorDelegate>)recorder];
+        [_audioMixerDevice removeAudioSamplesInterceptor:(id<SamplesInterceptorDelegate>)recorder];
+        [self removeCameraListener:recorder];
+        [recorder dispose];
+        [self.mediaRecorders removeObjectForKey:recorderId];
+        recorder = nil;
+        NSLog(@"disposed record %@", recorderId);
+        result(nil);
+    } else {
         result(FlutterMethodNotImplemented);
     }
 }
@@ -910,6 +1206,7 @@
         peerConnection.delegate = nil;
         [peerConnection close];
     }
+    [_cameraListeners removeAllObjects];
     [_peerConnections removeAllObjects];
     _peerConnectionFactory = nil;
 }
@@ -1005,7 +1302,7 @@
         // TODO: 'url' is non-standard
         urls = @[json[@"url"]];
     } else if ([json[@"urls"] isKindOfClass:[NSString class]]) {
-        urls = @[json[@"urls"]];
+        urls = [json[@"urls"] componentsSeparatedByString:@","];
     } else {
         urls = (NSArray*)json[@"urls"];
     }
@@ -1389,7 +1686,7 @@
         RTCRtpEncodingParameters *nativeEncoding = [nativeEncodings objectAtIndex:i];
         NSDictionary *encoding = [encodings objectAtIndex:i];
         if([encoding objectForKey:@"active"]){
-            nativeEncoding.isActive =  [encoding objectForKey:@"active"];
+            nativeEncoding.isActive =  [(NSNumber *)[encoding objectForKey:@"active"] boolValue];
         }
         if([encoding objectForKey:@"maxBitrateBps"]){
             nativeEncoding.maxBitrateBps =  [encoding objectForKey:@"maxBitrateBps"];
@@ -1401,7 +1698,7 @@
             nativeEncoding.maxFramerate =  [encoding objectForKey:@"maxFramerate"];
         }
         if([encoding objectForKey:@"numTemporalLayers"]){
-            nativeEncoding.isActive =  [encoding objectForKey:@"numTemporalLayers"];
+            nativeEncoding.isActive =  [(NSNumber *)[encoding objectForKey:@"numTemporalLayers"] boolValue];
         }
         if([encoding objectForKey:@"scaleResolutionDownBy"]){
             nativeEncoding.scaleResolutionDownBy =  [encoding objectForKey:@"scaleResolutionDownBy"];
@@ -1441,4 +1738,28 @@
     };
     return params;
 }
+
+- (void)addCameraListener:(id<CameraSwitchObserver>)observer {
+    dispatch_async(_dispatchQueue, ^() {
+        [self->_cameraListeners addObject:observer];
+    });
+}
+
+- (void)removeCameraListener:(id<CameraSwitchObserver>)observer {
+    // You can't use strong or weak pointers if the observer is already in the dealloc phase (i.e. removeObserver:
+    // is called from the observer's dealloc method). It will cause a crash.
+    id __unsafe_unretained unretainedObserver = observer;
+    dispatch_async(_dispatchQueue, ^() {
+        [self->_cameraListeners removeObject:unretainedObserver];
+    });
+}
+
+- (BOOL)containsObserver:(id<CameraSwitchObserver>)observer {
+    BOOL __block result;
+    dispatch_sync(_dispatchQueue, ^() {
+        result = [self->_cameraListeners containsObject:observer];
+    });
+    return result;
+}
+
 @end

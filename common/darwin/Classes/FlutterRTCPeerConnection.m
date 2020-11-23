@@ -167,6 +167,15 @@
     //NSLog(@"addICECandidateresult: %@", candidate);
 }
 
+-(void) peerConnectionRemoveICECandidates:(NSArray<RTCIceCandidate*>*)candidates
+                           peerConnection:(RTCPeerConnection *)peerConnection
+                                   result:(FlutterResult)result
+{
+    [peerConnection removeIceCandidates:candidates];
+    result(nil);
+    //NSLog(@"addICECandidateresult: %@", candidate);
+}
+
 -(void) peerConnectionClose:(RTCPeerConnection *)peerConnection
 {
     [peerConnection close];
@@ -190,32 +199,30 @@
                 peerConnection:(nonnull RTCPeerConnection *)peerConnection
                         result:(nonnull FlutterResult)result
 {
-    RTCMediaStreamTrack *track = nil;
-    if (!trackID
-        || !trackID.length
-        || (track = self.localTracks[trackID])
-        || (track = peerConnection.remoteTracks[trackID])) {
-        [peerConnection statsForTrack:track
-                     statsOutputLevel:RTCStatsOutputLevelStandard
-                    completionHandler:^(NSArray<RTCLegacyStatsReport *> *reports) {
-                        
-                        NSMutableArray *stats = [NSMutableArray array];
-                        
-                        for (RTCLegacyStatsReport *report in reports) {
-                            [stats addObject:@{@"id": report.reportId,
-                                               @"type": report.type,
-                                               @"timestamp": @(report.timestamp),
-                                               @"values": report.values
-                                               }];
-                        }
-                        
-                        result(@{@"stats": stats});
-                    }];
-    }else{
-        result([FlutterError errorWithCode:@"GetStatsFailed"
-                                   message:[NSString stringWithFormat:@"Error %@", @""]
-                                   details:nil]);
-    }
+    [peerConnection statisticsWithCompletionHandler:^(RTCStatisticsReport * stats) {
+        if (!stats) {
+            result([FlutterError errorWithCode:@"GetStatsFailed"
+                                       message:[NSString stringWithFormat:@"Error %@", @""]
+                                       details:nil]);
+            return;
+        }
+        NSDictionary<NSString *, RTCStatistics *> *statistics = [stats statistics];
+        NSMutableDictionary * statsDict = [[NSMutableDictionary alloc] init];
+        for(NSString* key in statistics) {
+            RTCStatistics *report = statistics[key];
+            statsDict[key] = @{
+                @"id": report.id,
+                @"type": report.type,
+                @"timestamp": @(report.timestamp_us / 1000),
+                @"values": report.values
+            };
+        }
+        NSDictionary * resultDict = @{
+            @"timestamp": @([stats timestamp_us] / 1000),
+            @"stats": statsDict,
+        };
+        result(resultDict);
+    }];
 }
 
 - (NSString *)stringForICEConnectionState:(RTCIceConnectionState)state {
