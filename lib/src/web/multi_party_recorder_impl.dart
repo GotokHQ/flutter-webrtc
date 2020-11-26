@@ -11,22 +11,23 @@ import 'package:dart_web_audio/dart_web_audio.dart';
 import '../interface/multi_party_recorder.dart';
 
 class VideoMixerSource {
-  VideoMixerSource._(this.trackId, this.context2d, {this.rectangle = Rect.zero})
+  VideoMixerSource._(this.trackId, this.context2d,
+      {this.rectangle = Rect.zero, this.mirror = false})
       : assert(rectangle != null);
 
   html.OffscreenCanvas _bitmapCanvas;
   final html.OffscreenCanvasRenderingContext2D context2d;
   final String trackId;
+  final bool mirror;
   Rect rectangle;
 
   Future<void> draw(html.ImageBitmap bitmap) async {
-    _bitmapCanvas ??= html.OffscreenCanvas(bitmap.width, bitmap.height);
-    final renderer = _bitmapCanvas.getContext('bitmaprenderer')
-        as html.ImageBitmapRenderingContext;
-    _bitmapCanvas.width = bitmap.width;
-    _bitmapCanvas.height = bitmap.height;
-    renderer.transferFromImageBitmap(bitmap);
-
+    // _bitmapCanvas ??= html.OffscreenCanvas(bitmap.width, bitmap.height);
+    // final renderer = _bitmapCanvas.getContext('bitmaprenderer')
+    //     as html.ImageBitmapRenderingContext;
+    // _bitmapCanvas.width = bitmap.width;
+    // _bitmapCanvas.height = bitmap.height;
+    // renderer.transferFromImageBitmap(bitmap);
     var hRatio = context2d.canvas.width / context2d.canvas.width;
     var vRatio = context2d.canvas.height / context2d.canvas.height;
     var ratio = max(hRatio, vRatio);
@@ -35,16 +36,9 @@ class VideoMixerSource {
     var centerShift_y = rectangle.top +
         (_bitmapCanvas.height - _bitmapCanvas.height * ratio) / 2;
     //context2d.clearRect(0, 0, rectangle.width, rectangle.height);
-    context2d.drawImage(
-        _bitmapCanvas,
-        0,
-        0,
-        _bitmapCanvas.width,
-        _bitmapCanvas.height,
-        centerShift_x,
-        centerShift_y,
-        rectangle.width,
-        rectangle.height);
+
+    context2d.drawImage(bitmap, 0, 0, _bitmapCanvas.width, _bitmapCanvas.height,
+        centerShift_x, centerShift_y, rectangle.width, rectangle.height);
   }
 }
 
@@ -119,15 +113,13 @@ class _AudioSourceDescription {
 
 class _VideoSourceDescription {
   _VideoSourceDescription._(this.track)
-      : imageCapture =
-            html.ImageCapture(track.jsTrack as html.MediaStreamTrack);
+      : imageCapture = html.ImageCapture(track.jsTrack);
 
   final html.ImageCapture imageCapture;
   final MediaStreamTrackWeb track;
 
   Future<html.ImageBitmap> grabFrame() async {
-    final imageCapture =
-        html.ImageCapture(track.jsTrack as html.MediaStreamTrack);
+    final imageCapture = html.ImageCapture(track.jsTrack);
     final bitmap = await imageCapture.grabFrame();
     return bitmap;
   }

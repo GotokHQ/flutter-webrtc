@@ -45,4 +45,9 @@ class MediaRecorderNative extends MediaRecorder {
   @override
   Future<dynamic> stop() async => await WebRTC.methodChannel()
       .invokeMethod('stopRecordToFile', {'recorderId': _recorderId});
+
+  @override
+  bool canStartWeb(MediaStream mediaStream, {String mimeType = 'video/webm'}) {
+    return false;
+  }
 }

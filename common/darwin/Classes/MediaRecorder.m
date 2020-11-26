@@ -108,7 +108,7 @@
         [_videoFileRenderer stopVideoRecordingWithCompletion:^{
             MediaRecorder *strongSelf = weakSelf;
             strongSelf->_isRecording = NO;
-            result(nil);
+            result(strongSelf->_videoFileRenderer.filePath);
             [strongSelf releaseVideoFileRenderer];
             NSLog(@"stopVideoRecording success");
         } onError:^(NSString *errorType, NSString *errorMessage){

@@ -1067,6 +1067,8 @@ void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
         id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
         [self removeCameraListener:recorder];
         [recorder stopVideoRecordingWithResult:result];
+        [recorder dispose];
+        [self.mediaRecorders removeObjectForKey:recorderId];
     } else if ([@"createMultiPartyRecorder" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         CGFloat width = [argsMap[@"width"] floatValue];
@@ -1146,25 +1148,6 @@ void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
         id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
         [recorder setPaused:isPause];
         result(nil);
-    } else if([@"addTrackToMediaRecorder" isEqualToString:call.method]){
-        NSLog(@"addTrackToMediaRecorder called");
-        NSDictionary* argsMap = call.arguments;
-        NSNumber *recorderId = argsMap[@"recorderId"];
-        NSString *trackId = argsMap[@"trackId"];
-        NSString *label = argsMap[@"label"];
-        id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
-        BOOL isRemote = NO;
-        RTCMediaStreamTrack *track = _localTracks[trackId];
-        if (!track) {
-            track = [self trackForId:trackId];
-            isRemote = YES;
-        }
-        if ([track isKindOfClass:[RTCVideoTrack class]]){
-            RTCVideoTrack *videoTrack = (RTCVideoTrack *)track;
-            [recorder addVideoTrack:videoTrack isRemote:isRemote label:label];
-            NSLog(@"Successfully Added video track:%@ to recorder:%@", trackId, recorderId);
-            result(@YES);
-        }
     } else if([@"startMultiPartyRecorder" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSString *path = argsMap[@"path"];

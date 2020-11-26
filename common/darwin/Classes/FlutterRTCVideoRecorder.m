@@ -397,7 +397,7 @@
         strongSelf->_offsetTime = kCMTimeZero;
         strongSelf->_running = NO;
         self.videoMixer = nil;
-        result(nil);
+        result(strongSelf.filePath);
     } onError:^(NSString *errorType, NSString *errorMessage) {
         result([FlutterError errorWithCode:errorType
                                    message:errorMessage

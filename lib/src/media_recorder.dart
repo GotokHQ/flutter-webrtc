@@ -28,4 +28,9 @@ class MediaRecorder extends _interface.MediaRecorder {
   }) =>
       _delegate.startWeb(stream,
           onDataChunk: onDataChunk, mimeType: mimeType ?? 'video/webm');
+
+  @override
+  bool canStartWeb(MediaStream mediaStream, {String mimeType = 'video/webm'}) {
+    return _delegate.canStartWeb(mediaStream, mimeType: mimeType);
+  }
 }

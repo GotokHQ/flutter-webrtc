@@ -15,5 +15,6 @@ public interface FlutterRecorder {
     public void setPaused(boolean paused);
     public void addVideoTrack(VideoTrack videoTrack, boolean isLocal, boolean isMirror, String label);
     public void removeVideoTrack(VideoTrack videoTrack, boolean isLocal, boolean isMirror, String label);
+    public File getRecordFile();
     public void dispose();
 }

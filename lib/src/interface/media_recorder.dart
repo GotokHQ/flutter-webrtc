@@ -17,4 +17,6 @@ abstract class MediaRecorder {
   });
 
   Future<dynamic> stop();
+
+  bool canStartWeb(MediaStream mediaStream, {String mimeType = 'video/webm'});
 }

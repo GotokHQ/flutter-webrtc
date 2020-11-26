@@ -630,7 +630,10 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         FlutterRecorder recorder = rtcRecorders.get(recorderId);
         if (recorder != null) {
           recorder.stopRecording();
-          result.success(null);
+          File file = recorder.getRecordFile();
+          rtcRecorders.remove(recorderId);
+          recorder.dispose();
+          result.success(file.getAbsolutePath());
         } else {
           resultError("0", "Media recorder not found", null);
         }
