@@ -574,6 +574,9 @@ class RTCFileRenderer implements VideoSink {
 
 
     public void stopAudRecord() {
+        if (audioEncoder == null)  {
+            return;
+        }
         audioEncoder.stopRecord();
         if (audioThread != null) {
             try {

@@ -25,7 +25,6 @@ class MediaRecorderNative extends MediaRecorder {
     if (!audioOnly && videoTrack == null) {
       throw Exception('Neither audio nor video track were provided');
     }
-
     await WebRTC.methodChannel().invokeMethod('startRecordToFile', {
       'path': path,
       'audioOnly': audioOnly,

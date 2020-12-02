@@ -112,9 +112,6 @@ public class RTCRecorder implements FlutterRecorder, GetUserMediaImpl.CameraSwit
         }
     }
 
-    public VideoTrack getVideoTrack() {
-        return videoTrack;
-    }
 
     public File getRecordFile() {
         return recordFile;
@@ -124,14 +121,17 @@ public class RTCRecorder implements FlutterRecorder, GetUserMediaImpl.CameraSwit
         doStopRecording();
     }
 
-    public void doStopRecording() {
+    private void doStopRecording() {
+        if (!isRunning) {
+            return;
+        }
         isRunning = false;
         Logging.d(TAG, "stopRecording");
         if (videoTrack != null && videoFileRenderer != null) {
             videoTrack.removeSink(videoFileRenderer);
-            String file = videoFileRenderer.getOutputFile();
             videoFileRenderer.stopAudRecord();
             videoFileRenderer.release();
+            videoFileRenderer = null;
         }
     }
 
@@ -158,7 +158,6 @@ public class RTCRecorder implements FlutterRecorder, GetUserMediaImpl.CameraSwit
             eventChannel.setStreamHandler(null);
         }
         doStopRecording();
-        videoFileRenderer = null;
         getUserMediaImpl.removeCameraSwitchListener(this);
     }
 

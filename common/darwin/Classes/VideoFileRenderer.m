@@ -78,7 +78,6 @@
 
 - (void)initGL {
     _device = MTLCreateSystemDefaultDevice();
-    [self createDataFBO];
 }
 
 + (MTLColorSwizzleRenderer *)createColorSwizzleThroughRenderer:(id<MTLDevice>)device {
@@ -173,7 +172,12 @@
  * @param size The size of the video frame to render.
  */
 - (void)setSize:(CGSize)size {
-    
+    if (CGSizeEqualToSize(_size, CGSizeZero)) {
+        _size = size;
+        [self destroyDataFBO];
+        [self createDataFBO];
+        [self setupWriterForPath:_filePath];
+    }
 }
 
 - (void)processFrame {
@@ -455,12 +459,6 @@
 }
 
 - (void)doStartVideoRecordingWithCompletion:(VideoFileRendererSuccessCallback)onComplete onError:(VideoFileRendererErrorCallback)onError {
-    if (![self setupWriterForPath:_filePath]) {
-        if (onError) {
-            onError(@"error", @"Setup Writer Failed");
-        }
-        return;
-    }
     _isRecording = YES;
     if (onComplete) {
         onComplete();

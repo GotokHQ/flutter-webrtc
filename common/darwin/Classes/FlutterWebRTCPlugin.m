@@ -97,6 +97,7 @@ void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
     self.localStreams = [NSMutableDictionary new];
     self.localTracks = [NSMutableDictionary new];
     self.renders = [[NSMutableDictionary alloc] init];
+    self.mediaRecorders = [[NSMutableDictionary alloc] init];
     _audioSamplesInterceptor = [[SamplesInterceptor alloc] init];
     
     RTCAudioSessionConfiguration *webRTCConfig =
@@ -1037,6 +1038,8 @@ void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
         NSNumber *recorderId = argsMap[@"recorderId"];
         CGFloat width = [argsMap[@"width"] floatValue];
         CGFloat height = [argsMap[@"height"] floatValue];
+        NSLog(@"width: %f", width);
+        NSLog(@"height: %f", height);
         NSString *trackId = argsMap[@"videoTrackId"];
         NSString *type = argsMap[@"type"];
         CGSize size = CGSizeMake(width, height);
@@ -1058,17 +1061,17 @@ void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
         }
         [self addCameraListener:recorder];
         self.mediaRecorders[recorderId] = recorder;
+        NSLog(@"FOUND RECORDER START:%@", self.mediaRecorders[recorderId]);
         [recorder startVideoRecordingAtPath:path result:result];
-        NSLog(@"recorder: %@", recorder);
-        NSLog(@"recorder type: %@", type);
     } else if ([@"stopRecordToFile" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         NSNumber *recorderId = argsMap[@"recorderId"];
+        NSLog(@"stopRecordToFile recorder:%@", recorderId);
         id<FlutterRecorder> recorder = self.mediaRecorders[recorderId];
+        NSLog(@"FOUND RECORDER:%@", recorder);
         [self removeCameraListener:recorder];
-        [recorder stopVideoRecordingWithResult:result];
-        [recorder dispose];
         [self.mediaRecorders removeObjectForKey:recorderId];
+        [recorder stopVideoRecordingWithResult:result];
     } else if ([@"createMultiPartyRecorder" isEqualToString:call.method]){
         NSDictionary* argsMap = call.arguments;
         CGFloat width = [argsMap[@"width"] floatValue];

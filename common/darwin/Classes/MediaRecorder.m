@@ -103,13 +103,17 @@
 }
 
 -(void)stopVideoRecordingWithResult:(FlutterResult)result {
+    NSLog(@"About to stop recording: %d", _isRecording);
     if (_isRecording) {
         __weak MediaRecorder *weakSelf = self;
         [_videoFileRenderer stopVideoRecordingWithCompletion:^{
+            NSLog(@"stopVideoRecordingWithCompletion called");
             MediaRecorder *strongSelf = weakSelf;
+            NSString *filePath = strongSelf->_videoFileRenderer.filePath;
             strongSelf->_isRecording = NO;
-            result(strongSelf->_videoFileRenderer.filePath);
             [strongSelf releaseVideoFileRenderer];
+            result(filePath);
+            [strongSelf dispose];
             NSLog(@"stopVideoRecording success");
         } onError:^(NSString *errorType, NSString *errorMessage){
             NSLog(@"stopVideoRecording error");

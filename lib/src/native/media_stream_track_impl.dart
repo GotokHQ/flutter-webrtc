@@ -143,7 +143,6 @@ class MediaStreamTrackNative extends MediaStreamTrack {
 
   @override
   Future<void> setMicrophoneMute(bool mute) async {
-    print('MediaStreamTrack:setMicrophoneMute $mute');
     await _channel.invokeMethod(
       'setMicrophoneMute',
       <String, dynamic>{'trackId': value.id, 'mute': mute},

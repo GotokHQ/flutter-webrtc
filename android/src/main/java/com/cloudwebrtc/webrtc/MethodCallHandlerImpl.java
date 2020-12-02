@@ -255,6 +255,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           tracks.pushMap(track_);
         }
         result.success(tracks.toArrayList());
+        break;
       }
       case "mediaStreamGetTracks": {
         String streamId = call.argument("streamId");
@@ -354,6 +355,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           candidatesMap.add(constraintsMap);
         }
         peerConnectionRemoveICECandidates(candidatesMap, peerConnectionId, result);
+        break;
       }
       case "getStats": {
         String peerConnectionId = call.argument("peerConnectionId");
@@ -501,6 +503,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           return;
         }
         render.blur(mute, result);
+        break;
       }
       case "videoRendererSetBlurred": {
         int textureId = call.argument("textureId");
@@ -512,6 +515,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           return;
         }
         render.blur(blur, result);
+        break;
       }
       case "mediaStreamTrackHasTorch": {
         String trackId = call.argument("trackId");
@@ -533,15 +537,18 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         String trackId = call.argument("trackId");
         mediaStreamTrackStart(trackId);
         result.success(null);
+        break;
       }
       case "mediaStreamTrackStop": {
         String trackId = call.argument("trackId");
         mediaStreamTrackStop(trackId);
         result.success(null);
+        break;
       }
       case "mediaStreamTrackRestartCamera": {
         String trackId = call.argument("trackId");
         getUserMediaImpl.restartCamera(trackId, result);
+        break;
       }
       case "mediaStreamTrackAdaptOutputFormat": {
         String trackId = call.argument("trackId");
@@ -591,9 +598,6 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         //so we should notify plugin user about them
         try {
           String path = call.argument("path");
-          double width = call.argument("width");
-          double height = call.argument("height");
-          Size videoSize = new Size((int) width, (int) height);
           VideoTrack videoTrack = null;
           String videoTrackId = call.argument("videoTrackId");
           if (videoTrackId != null) {
@@ -608,7 +612,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
             return;
           }
           Integer recorderId = call.argument("recorderId");
-          RTCRecorder recorder = new RTCRecorder(recorderId, videoSize, getUserMediaImpl, messenger, audioOnly);
+          RTCRecorder recorder = new RTCRecorder(recorderId, new Size(-1,  -1), getUserMediaImpl, messenger, audioOnly);
           boolean isMirror = false;
           if (videoTrack != null) {
             GetUserMediaImpl.VideoCapturerDesc desc = getUserMediaImpl.getVideoCapturerDesc(videoTrack.id());
@@ -629,13 +633,12 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         Integer recorderId = call.argument("recorderId");
         FlutterRecorder recorder = rtcRecorders.get(recorderId);
         if (recorder != null) {
-          recorder.stopRecording();
           File file = recorder.getRecordFile();
           rtcRecorders.remove(recorderId);
           recorder.dispose();
           result.success(file.getAbsolutePath());
         } else {
-          resultError("0", "Media recorder not found", null);
+          resultError("stopRecordToFile", "Media recorder not found", result);
         }
         break;
       }
@@ -666,7 +669,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         Size videoSize = new Size((int) width, (int) height);
         FlutterRecorder recorder = null;
         if (type == ConnectionType.LOCAL) {
-          recorder = new RTCRecorder(recorderId, videoSize, getUserMediaImpl, messenger, audioOnly);
+          recorder = new RTCRecorder(recorderId, null, getUserMediaImpl, messenger, audioOnly);
         } else if (type == ConnectionType.MIXED) {
           recorder = new FlutterVideoRecorder(recorderId, recordSamplesInterceptor, playbackSamplesInterceptor, videoSize, format, messenger, getUserMediaImpl, audioOnly);
         }
