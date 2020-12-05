@@ -36,7 +36,7 @@ class VideoMixerSource {
     var centerShift_y = rectangle.top +
         (_bitmapCanvas.height - _bitmapCanvas.height * ratio) / 2;
     //context2d.clearRect(0, 0, rectangle.width, rectangle.height);
-
+  
     context2d.drawImage(bitmap, 0, 0, _bitmapCanvas.width, _bitmapCanvas.height,
         centerShift_x, centerShift_y, rectangle.width, rectangle.height);
   }
