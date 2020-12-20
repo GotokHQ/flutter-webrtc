@@ -32,6 +32,8 @@ class MediaStreamTrackNative extends MediaStreamTrack {
   final MethodChannel _channel = WebRTC.methodChannel();
   bool _isReleased = false;
 
+  bool _muted = false;
+
   @override
   set enabled(bool enabled) {
     var old = value.enabled;
@@ -45,7 +47,7 @@ class MediaStreamTrackNative extends MediaStreamTrack {
   }
 
   @override
-  Future<void> switchCamera() async {
+  Future<bool> switchCamera() async {
     var switched = value.switched;
     try {
       value = value.copyWith(switching: true);
@@ -54,9 +56,11 @@ class MediaStreamTrackNative extends MediaStreamTrack {
         <String, dynamic>{'trackId': value.id},
       );
       value = value.copyWith(switched: !switched, switching: false);
+      return true;
     } catch (error) {
       value = value.copyWith(switched: switched, switching: false);
     }
+    return false;
   }
 
   @override
@@ -64,6 +68,9 @@ class MediaStreamTrackNative extends MediaStreamTrack {
         'mediaStreamTrackRestartCamera',
         <String, dynamic>{'trackId': value.id},
       );
+
+  @override
+  bool get muted => _muted;
 
   @override
   Future<bool> hasTorch() => _channel.invokeMethod(
@@ -170,6 +177,19 @@ class MediaStreamTrackNative extends MediaStreamTrack {
       'captureFrame',
       <String, dynamic>{'trackId': value.id, 'path': filePath},
     );
+  }
+
+  @override
+  Future<void> applyConstraints([Map<String, dynamic> constraints]) {
+    if (constraints == null) return Future.value();
+
+    var _current = getConstraints();
+    if (constraints.containsKey('volume') &&
+        _current['volume'] != constraints['volume']) {
+      setVolume(constraints['volume']);
+    }
+
+    return Future.value();
   }
 
   @override

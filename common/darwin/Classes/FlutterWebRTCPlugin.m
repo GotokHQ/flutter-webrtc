@@ -432,7 +432,7 @@ void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
 
         RTCMediaStream *stream = self.localStreams[streamId];
         if (stream) {
-            RTCMediaStreamTrack *track = self.localTracks[trackId];
+            RTCMediaStreamTrack *track = [self trackForId: trackId];
             if(track != nil) {
                 if([track isKindOfClass:[RTCAudioTrack class]]) {
                     RTCAudioTrack *audioTrack = (RTCAudioTrack *)track;
@@ -1317,6 +1317,14 @@ void runAsyncOnQueue(dispatch_queue_t queue, void (^block)(void))
     if (!track) {
         for (RTCPeerConnection *peerConnection in _peerConnections.allValues) {
             track = peerConnection.remoteTracks[trackId];
+            if (!track) {
+                for (RTCRtpTransceiver *transceiver in peerConnection.transceivers) {
+                    if (transceiver.receiver.track != nil && [transceiver.receiver.track.trackId isEqual:trackId]) {
+                        track = transceiver.receiver.track;
+                        break;
+                    }
+                }
+            }
             if (track) {
                 break;
             }

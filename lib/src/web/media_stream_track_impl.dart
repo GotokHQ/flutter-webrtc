@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:html' as html;
-import 'dart:js' as js;
+import 'dart:js_util' as js;
 
 import 'package:flutter/foundation.dart';
 
@@ -24,6 +24,9 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
     jsTrack.onMute.listen((event) {
       value = value.copyWith(enabled: false);
     });
+    jsTrack.onUnmute.listen((event) {
+      value = value.copyWith(enabled: true);
+    });
   }
 
   bool _isReleased = false;
@@ -35,6 +38,9 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
 
   @override
   String get kind => jsTrack.kind;
+
+  @override
+  bool get muted => jsTrack.muted;
 
   @override
   set enabled(bool enabled) {
@@ -59,11 +65,19 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
   }
 
   @override
-  Future<void> setVolume(double volume) async {
-    final constraints = jsTrack.getConstraints();
-    constraints['volume'] = volume;
-    js.JsObject.fromBrowserObject(jsTrack)
-        .callMethod('applyConstraints', [js.JsObject.jsify(constraints)]);
+  Map<String, dynamic> getConstraints() {
+    return jsTrack.getConstraints();
+  }
+
+  @override
+  Future<void> applyConstraints([Map<String, dynamic> constraints]) async {
+    // TODO(wermathurin): Wait for: https://github.com/dart-lang/sdk/commit/1a861435579a37c297f3be0cf69735d5b492bc6c
+    // to be merged to use jsTrack.applyConstraints() directly
+    final arg = js.jsify(constraints);
+
+    final _val = await js.promiseToFuture<void>(
+        js.callMethod(jsTrack, 'applyConstraints', [arg]));
+    return _val;
   }
 
   @override
@@ -83,7 +97,9 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
   }
 
   @override
-  Future<void> stop() async {}
+  Future<void> stop() async {
+    jsTrack.stop();
+  }
 
   @override
   Future<void> start() async {}

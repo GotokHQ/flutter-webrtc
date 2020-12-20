@@ -1261,7 +1261,9 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     MediaStream stream = null;
     if (peerConnectionId.length() > 0) {
       PeerConnectionObserver pco = mPeerConnectionObservers.get(peerConnectionId);
-      stream = pco.remoteStreams.get(id);
+      if (pco != null) {
+        stream = pco.remoteStreams.get(id);
+      }
     } else {
       for (Entry<String, PeerConnectionObserver> entry : mPeerConnectionObservers
               .entrySet()) {
@@ -1286,6 +1288,11 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       for (Entry<String, PeerConnectionObserver> entry : mPeerConnectionObservers.entrySet()) {
         PeerConnectionObserver pco = entry.getValue();
         track = pco.remoteTracks.get(trackId);
+
+        if (track == null) {
+          track = pco.getTransceiversTrack(trackId);
+        }
+
         if (track != null) {
           break;
         }
@@ -1405,8 +1412,8 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
     }
   }
 
-  public void mediaStreamAddTrack(final String streaemId, final String trackId, Result result) {
-    MediaStream mediaStream = localStreams.get(streaemId);
+  public void mediaStreamAddTrack(final String streamId, final String trackId, Result result) {
+    MediaStream mediaStream = localStreams.get(streamId);
     if (mediaStream != null) {
       MediaStreamTrack track = getTrackForId(trackId);//localTracks.get(trackId);
       if (track != null) {
@@ -1416,16 +1423,16 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           mediaStream.addTrack((VideoTrack) track);
         }
       } else {
-        resultError("mediaStreamAddTrack", "mediaStreamAddTrack() tracking [" + trackId + "] is null", result);
+        resultError("mediaStreamAddTrack", "mediaStreamAddTrack() track [" + trackId + "] is null", result);
       }
     } else {
-      resultError("mediaStreamAddTrack", "mediaStreamAddTrack() streamId [" + streaemId + "] is null", result);
+      resultError("mediaStreamAddTrack", "mediaStreamAddTrack() stream [" + streamId + "] is null", result);
     }
     result.success(null);
   }
 
-  public void mediaStreamRemoveTrack(final String streaemId, final String trackId, Result result) {
-    MediaStream mediaStream = localStreams.get(streaemId);
+  public void mediaStreamRemoveTrack(final String streamId, final String trackId, Result result) {
+    MediaStream mediaStream = localStreams.get(streamId);
     if (mediaStream != null) {
       MediaStreamTrack track = localTracks.get(trackId);
       if (track != null) {
@@ -1438,7 +1445,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
         resultError("mediaStreamRemoveTrack", "mediaStreamAddTrack() track [" + trackId + "] is null", result);
       }
     } else {
-      resultError("mediaStreamRemoveTrack", "mediaStreamAddTrack() track [" + trackId + "] is null", result);
+      resultError("mediaStreamRemoveTrack", "mediaStreamAddTrack() stream [" + streamId + "] is null", result);
     }
     result.success(null);
   }
