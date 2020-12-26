@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js' as js;
+import 'dart:web_audio';
+import 'dart:js_util' as jsutil;
 import 'dart:math';
 import 'package:platform_detect/platform_detect.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:flutter_webrtc/src/web/media_stream_track_impl.dart';
-import 'package:dart_web_audio/dart_web_audio.dart';
 
 import '../interface/multi_party_recorder.dart';
 
@@ -108,7 +109,7 @@ class _AudioSourceDescription {
   _AudioSourceDescription._(this.track, this.sourceNode);
 
   final MediaStreamTrackWeb track;
-  final MediaStreamTrackAudioSourceNode sourceNode;
+  final AudioNode sourceNode;
 }
 
 class _VideoSourceDescription {
@@ -160,10 +161,10 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
       _canvas.height = videoSize.height.toInt();
       _videoMixer = VideoMixer(_canvas.transferControlToOffscreen());
     }
-    _audioContext = AudioContext(AudioContextOptions(sampleRate: 48000));
+    _audioContext = AudioContext();
     _audioDestinationNode = _audioContext.createMediaStreamDestination();
     _gainNode = _audioContext.createGain();
-    _gainNode.connect(_audioContext.destination);
+    _gainNode.connectNode(_audioContext.destination);
     _gainNode.gain.value = 0; // don't hear self
     value = value.copyWith(isInitialized: true);
   }
@@ -191,14 +192,14 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
       }
       final audioSourceDesc = _AudioSourceDescription._(
         track,
-        _audioContext.createMediaStreamTrackSource(
-            (track as MediaStreamTrackWeb).jsTrack),
+              jsutil.callMethod(
+          _audioContext, 'createMediaStreamTrackSource', [(track as MediaStreamTrackWeb).jsTrack])
       );
       audioSources.add(
         audioSourceDesc,
       );
-      _audioDestinationNode.connect(audioSourceDesc.sourceNode);
-      audioSourceDesc.sourceNode.connect(_gainNode);
+      _audioDestinationNode.connectNode(audioSourceDesc.sourceNode);
+      audioSourceDesc.sourceNode.connectNode(_gainNode);
     }
   }
 
