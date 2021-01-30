@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../interface/enums.dart';
@@ -9,7 +10,7 @@ class RTCVideoView extends StatefulWidget {
     this._renderer, {
     Key key,
     this.objectFit = RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
-    this.mirror = true,
+    this.mirror = false,
   })  : assert(objectFit != null),
         assert(mirror != null),
         super(key: key);
@@ -33,16 +34,16 @@ class _RTCVideoViewState extends State<RTCVideoView> {
     });
   }
 
-  Widget buildVideoElementView(RTCVideoViewObjectFit objFit, bool mirror) {
-    videoRenderer.mirror = mirror;
+  Widget buildVideoElementView(RTCVideoViewObjectFit objFit) {
+    // videoRenderer.mirror = mirror;
     videoRenderer.objectFit =
         objFit == RTCVideoViewObjectFit.RTCVideoViewObjectFitContain
             ? 'contain'
             : 'cover';
-    print('MIRROR SET TO: $mirror');
     return HtmlElementView(
         viewType: 'RTCVideoRenderer-${videoRenderer.textureId}');
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -53,7 +54,11 @@ class _RTCVideoViewState extends State<RTCVideoView> {
         width: constraints.maxWidth,
         height: constraints.maxHeight,
         child: widget._renderer.renderVideo
-            ? buildVideoElementView(widget.objectFit, widget.mirror)
+            ? Transform(
+                transform: Matrix4.identity()..rotateY(widget.mirror ? -pi : 0.0),
+                alignment: FractionalOffset.center,
+                child: buildVideoElementView(widget.objectFit)
+              )
             : Container(),
       ));
     });
