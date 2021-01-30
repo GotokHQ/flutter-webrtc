@@ -44,8 +44,10 @@ class RTCVideoRendererWeb extends VideoRenderer {
 
   set objectFit(String fit) => _videoElement.style.objectFit = fit;
 
-  set mirror(bool mirror) =>
+  set mirror(bool mirror) {
       _videoElement.style.transform = 'rotateY(${mirror ? "180" : "0"}deg)';
+      print('MIRROR SET ON TRANSFORM:  ${_videoElement.style.transform}');
+  }
 
   @override
   int get videoWidth => value.size.width.toInt();
