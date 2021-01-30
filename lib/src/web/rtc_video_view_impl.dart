@@ -39,6 +39,7 @@ class _RTCVideoViewState extends State<RTCVideoView> {
         objFit == RTCVideoViewObjectFit.RTCVideoViewObjectFitContain
             ? 'contain'
             : 'cover';
+    print('MIRROR SET TO: $mirror');
     return HtmlElementView(
         viewType: 'RTCVideoRenderer-${videoRenderer.textureId}');
   }
