@@ -34,8 +34,8 @@ class _RTCVideoViewState extends State<RTCVideoView> {
     });
   }
 
-  Widget buildVideoElementView(RTCVideoViewObjectFit objFit) {
-    // videoRenderer.mirror = mirror;
+  Widget buildVideoElementView(RTCVideoViewObjectFit objFit, bool mirror) {
+    videoRenderer.mirror = mirror;
     videoRenderer.objectFit =
         objFit == RTCVideoViewObjectFit.RTCVideoViewObjectFitContain
             ? 'contain'
@@ -54,11 +54,7 @@ class _RTCVideoViewState extends State<RTCVideoView> {
         width: constraints.maxWidth,
         height: constraints.maxHeight,
         child: widget._renderer.renderVideo
-            ? Transform(
-                transform: Matrix4.identity()..rotateY(widget.mirror ? -pi : 0.0),
-                alignment: FractionalOffset.center,
-                child: buildVideoElementView(widget.objectFit)
-              )
+            ? buildVideoElementView(widget.objectFit, widget.mirror)
             : Container(),
       ));
     });
