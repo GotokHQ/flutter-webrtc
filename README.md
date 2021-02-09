@@ -8,8 +8,8 @@ WebRTC plugin for Flutter Mobile/Desktop/Web
 
 | Feature | Android | iOS | [Web](https://flutter.dev/web) | macOS | Windows | Linux | [Fuchsia](https://fuchsia.googlesource.com/) |
 | :-------------: | :-------------:| :-----: | :-----: | :-----: | :-----: | :-----: | :-----: |
-| Audio/Video | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | [WIP] | [WIP] | |
-| Data Channel | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | [WIP] | [WIP] | |
+| Audio/Video | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | [WIP] | |
+| Data Channel | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | [WIP] | |
 | Screen Capture | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | | | | |
 | Unified-Plan | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | | | |
 | Simulcast | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | | | |
@@ -69,6 +69,10 @@ android {
 
 If necessary, in the same `build.gradle` you will need to increase `minSdkVersion` of `defaultConfig` up to `21` (currently default Flutter generator set it to `16`).
 
+### Important reminder
+When you compile the release apk, you need to add the following operations,
+[Setup Proguard Rules](https://github.com/flutter-webrtc/flutter-webrtc/commit/d32dab13b5a0bed80dd9d0f98990f107b9b514f4)
+
 ## Contributing
 
 The project is inseparable from the contributors of the community.
@@ -77,6 +81,7 @@ The project is inseparable from the contributors of the community.
 - [RainwayApp](https://github.com/rainwayapp) - Sponsor
 - [亢少军](https://github.com/kangshaojun) - Sponsor
 - [ION](https://github.com/pion/ion) - Sponsor
+- [reSipWebRTC](https://github.com/reSipWebRTC) - Sponsor
 
 ### Example
 

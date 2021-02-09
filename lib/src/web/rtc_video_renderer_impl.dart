@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:ui';
+import 'dart:js_util' as jsutil;
 
 import 'package:flutter/services.dart';
 
@@ -200,5 +201,20 @@ class RTCVideoRendererWeb extends VideoRenderer {
     _videoElement = null;
     _lifeCycleObserver?.dispose();
     _lifeCycleObserver = null;
+  }
+
+  @override
+  Future<bool> audioOutput(String deviceId) async {
+    try {
+      if (jsutil.hasProperty(_videoElement, 'setSinkId')) {
+        await jsutil.promiseToFuture<void>(
+            jsutil.callMethod(_videoElement, 'setSinkId', [deviceId]));
+
+        return true;
+      }
+    } catch (e) {
+      print('Unable to setSinkId: ${e.toString()}');
+    }
+    return false;
   }
 }

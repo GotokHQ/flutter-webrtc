@@ -6,14 +6,21 @@ import '../rtc_video_renderer.dart';
 import 'rtc_video_renderer_impl.dart';
 
 class RTCVideoView extends StatelessWidget {
-  RTCVideoView(this._renderer,
-      {this.objectFit = RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
-      this.mirror = false})
-      : assert(_renderer != null);
+  RTCVideoView(
+    this._renderer, {
+    Key key,
+    this.objectFit = RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+    this.mirror = false,
+    this.filterQuality = FilterQuality.low,
+  })  : assert(objectFit != null),
+        assert(mirror != null),
+        assert(filterQuality != null),
+        super(key: key);
 
   final RTCVideoRenderer _renderer;
   final RTCVideoViewObjectFit objectFit;
   final bool mirror;
+  final FilterQuality filterQuality;
 
   RTCVideoRendererNative get videoRenderer =>
       _renderer.delegate as RTCVideoRendererNative;
@@ -43,7 +50,7 @@ class RTCVideoView extends StatelessWidget {
                     height: value.rotation == 90 || value.rotation == 270
                         ? value.size.width
                         : value.size.height,
-                    child: Texture(textureId: videoRenderer.textureId),
+                    child: Texture(textureId: videoRenderer.textureId, filterQuality: filterQuality,),
                   ),
                 ),
               ),

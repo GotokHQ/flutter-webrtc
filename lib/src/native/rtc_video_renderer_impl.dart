@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 
 import '../interface/media_stream.dart';
 import '../interface/rtc_video_renderer.dart';
@@ -181,5 +182,10 @@ class RTCVideoRendererNative extends VideoRenderer {
       print('error: $error');
       value = value.copyWith(mute: old);
     });
+
+  @override
+  Future<bool> audioOutput(String deviceId) {
+    // TODO(cloudwebrtc): related to https://github.com/flutter-webrtc/flutter-webrtc/issues/395
+    throw UnimplementedError('This is not implement yet');
   }
 }
