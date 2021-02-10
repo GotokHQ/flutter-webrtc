@@ -14,6 +14,7 @@ abstract class MediaRecorder {
     MediaStream stream, {
     Function(dynamic blob, bool isLastOne) onDataChunk,
     String mimeType,
+    bool mirror = true,
   });
 
   Future<dynamic> stop();

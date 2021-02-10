@@ -37,7 +37,7 @@ class MediaRecorderNative extends MediaRecorder {
 
   @override
   void startWeb(MediaStream stream,
-      {Function(dynamic blob, bool isLastOne) onDataChunk, String mimeType}) {
+      {Function(dynamic blob, bool isLastOne) onDataChunk, String mimeType, bool mirror = true,}) {
     throw 'It\'s for Flutter Web only';
   }
 
