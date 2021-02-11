@@ -40,7 +40,7 @@ class MediaRecorderWeb extends MediaRecorder {
       width = _videoElement.videoWidth;
       height = _videoElement.videoHeight;
     } else {
-      if (_videoTrack.jsTrack.readyState != 'live' || !(_videoTrack.jsTrack.readyState.enabled ?? false) || (_videoTrack.jsTrack.readyState.muted ?? false)) {
+      if (_videoTrack.jsTrack.readyState != 'live' || !(_videoTrack.jsTrack.enabled ?? false) || (_videoTrack.jsTrack.muted ?? false)) {
         return;
       }
       final imageBitmap = await grabFrame();
