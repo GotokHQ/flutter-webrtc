@@ -40,6 +40,9 @@ class MediaRecorderWeb extends MediaRecorder {
       width = _videoElement.videoWidth;
       height = _videoElement.videoHeight;
     } else {
+      if (_videoTrack.jsTrack.readyState != 'live' || !(_videoTrack.jsTrack.readyState.enabled ?? false) || (_videoTrack.jsTrack.readyState.muted ?? false)) {
+        return;
+      }
       final imageBitmap = await grabFrame();
       width = imageBitmap.width;
       height = imageBitmap.height;
@@ -155,6 +158,7 @@ class MediaRecorderWeb extends MediaRecorder {
 
   @override
   Future<dynamic> stop() {
+     _started = false;
     _recorder?.stop();
     _sub?.cancel();
     _videoElement?.removeAttribute('src');
@@ -172,7 +176,7 @@ class MediaRecorderWeb extends MediaRecorder {
       html.ImageCapture(_videoTrack.jsTrack);
       return true;
     } catch (error) {
-      print('error:ImageCapture: $error');
+      //print('error:ImageCapture: $error');
     }
     return false;
   }
@@ -183,7 +187,7 @@ class MediaRecorderWeb extends MediaRecorder {
       html.MediaRecorder(mediaStream, {'mimeType': mimeType});
       return true;
     } catch (error) {
-      print('error:MediaRecorder: $error');
+      //print('error:MediaRecorder: $error');
     }
     return false;
   }
@@ -195,7 +199,7 @@ class MediaRecorderWeb extends MediaRecorder {
           (mediaStream as MediaStreamWeb).jsStream, {'mimeType': mimeType});
       return true;
     } catch (error) {
-      print('error:MediaRecorder: $error');
+      //print('error:MediaRecorder: $error');
     }
     return false;
   }
