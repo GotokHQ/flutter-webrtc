@@ -47,7 +47,6 @@ class RTCVideoRendererWeb extends VideoRenderer {
 
   set mirror(bool mirror) {
       _videoElement.style.transform = 'rotateY(${mirror ? "180" : "0"}deg)';
-      print('MIRROR SET ON TRANSFORM:  ${_videoElement.style.transform}');
   }
 
   @override
