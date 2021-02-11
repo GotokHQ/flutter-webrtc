@@ -182,7 +182,8 @@ class RTCVideoRendererNative extends VideoRenderer {
       print('error: $error');
       value = value.copyWith(mute: old);
     });
-
+  }
+  
   @override
   Future<bool> audioOutput(String deviceId) {
     // TODO(cloudwebrtc): related to https://github.com/flutter-webrtc/flutter-webrtc/issues/395
