@@ -1,1 +1,1 @@
-/Users/evenmatrix/Desktop/project/gotok_w/gotok_libs/flutter-webrtc/common/darwin/Classes/FlutterRTCFrameCapturer.m
+../../common/darwin/Classes/FlutterRTCFrameCapturer.m
