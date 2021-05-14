@@ -123,15 +123,15 @@ class MediaStreamTrackWeb extends MediaStreamTrack {
   Future<dynamic> captureFrame([String filePath]) async {
     final imageCapture = html.ImageCapture(jsTrack);
     final bitmap = await imageCapture.grabFrame();
-    final html.CanvasElement canvas = html.Element.canvas();
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    final html.ImageBitmapRenderingContext renderer =
-        canvas.getContext('bitmaprenderer');
-    renderer.transferFromImageBitmap(bitmap);
-    final dataUrl = canvas.toDataUrl();
-    bitmap.close();
-    return dataUrl;
+    // final html.CanvasElement canvas = html.Element.canvas();
+    // canvas.width = bitmap.width;
+    // canvas.height = bitmap.height;
+    // final html.ImageBitmapRenderingContext renderer =
+    //     canvas.getContext('bitmaprenderer');
+    // renderer.transferFromImageBitmap(bitmap);
+    // final dataUrl = canvas.toDataUrl();
+    // bitmap.close();
+    return bitmap;
   }
 
   @override
