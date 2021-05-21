@@ -22,14 +22,14 @@ class MediaStreamNative extends MediaStream {
   void setMediaTracks(List<dynamic> audioTracks, List<dynamic> videoTracks) {
     _audioTracks.clear();
     audioTracks?.forEach((track) {
-      _audioTracks.add(MediaStreamTrackNative(
-          track['id'], track['label'], track['kind'], track['enabled'], track['remote']));
+      _audioTracks.add(MediaStreamTrackNative(track['id'], track['label'],
+          track['kind'], track['enabled'], track['remote']));
     });
 
     _videoTracks.clear();
     videoTracks?.forEach((track) {
-      _videoTracks.add(MediaStreamTrackNative(
-          track['id'], track['label'], track['kind'], track['enabled'], track['remote']));
+      _videoTracks.add(MediaStreamTrackNative(track['id'], track['label'],
+          track['kind'], track['enabled'], track['remote']));
     });
   }
 
@@ -103,6 +103,11 @@ class MediaStreamNative extends MediaStream {
   @override
   MediaStream clone() {
     // TODO(cloudwebrtc): Implement
+    throw UnimplementedError();
+  }
+
+  @override
+  dynamic nativeHandle() {
     throw UnimplementedError();
   }
 }

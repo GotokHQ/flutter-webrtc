@@ -18,6 +18,8 @@ abstract class MediaStream {
 
   String get ownerTag => _ownerTag;
 
+  dynamic nativeHandle();
+
   /// The active attribute return true if this [MediaStream] is active and false otherwise.
   /// [MediaStream] is considered active if at least one of its [MediaStreamTracks] is not in the [MediaStreamTrack.ended] state.
   /// Once every track has ended, the stream's active property becomes false.

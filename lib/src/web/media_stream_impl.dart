@@ -70,4 +70,9 @@ class MediaStreamWeb extends MediaStream {
   MediaStream clone() {
     return MediaStreamWeb(jsStream.clone(), ownerTag);
   }
+
+  @override
+  dynamic nativeHandle() {
+    return jsStream;
+  }
 }
