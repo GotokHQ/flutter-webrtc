@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:ui';
 
-import '../interface/enums.dart';
 import '../interface/media_recorder.dart';
 import '../interface/media_stream.dart';
 import '../interface/media_stream_track.dart';
@@ -14,14 +13,9 @@ class MediaRecorderNative extends MediaRecorder {
 
   @override
   Future<void> start(String path,
-      {MediaStreamTrack videoTrack, bool audioOnly = false, Size videoSize
+      {MediaStreamTrack? videoTrack, bool audioOnly = false, Size? videoSize
       // TODO(cloudwebrtc): add codec/quality options
       }) async {
-    assert(audioOnly != null);
-    if (path == null) {
-      throw ArgumentError.notNull('path');
-    }
-
     if (!audioOnly && videoTrack == null) {
       throw Exception('Neither audio nor video track were provided');
     }
@@ -36,8 +30,12 @@ class MediaRecorderNative extends MediaRecorder {
   }
 
   @override
-  void startWeb(MediaStream stream,
-      {Function(dynamic blob, bool isLastOne) onDataChunk, String mimeType, bool mirror = true,}) {
+  void startWeb(
+    MediaStream stream, {
+    Function(dynamic blob, bool isLastOne)? onDataChunk,
+    String? mimeType,
+    bool mirror = true,
+  }) {
     throw 'It\'s for Flutter Web only';
   }
 

@@ -11,9 +11,9 @@ class MediaRecorder extends _interface.MediaRecorder {
 
   @override
   Future<void> start(String path,
-          {MediaStreamTrack videoTrack,
+          {MediaStreamTrack? videoTrack,
           bool audioOnly = false,
-          Size videoSize}) =>
+          Size? videoSize}) =>
       _delegate.start(path,
           videoTrack: videoTrack, audioOnly: audioOnly, videoSize: videoSize);
 
@@ -23,12 +23,14 @@ class MediaRecorder extends _interface.MediaRecorder {
   @override
   void startWeb(
     MediaStream stream, {
-    Function(dynamic blob, bool isLastOne) onDataChunk,
-    String mimeType,
+    Function(dynamic blob, bool isLastOne)? onDataChunk,
+    String? mimeType,
     bool mirror = true,
   }) =>
       _delegate.startWeb(stream,
-          onDataChunk: onDataChunk, mimeType: mimeType ?? 'video/webm', mirror: mirror);
+          onDataChunk: onDataChunk,
+          mimeType: mimeType ?? 'video/webm',
+          mirror: mirror);
 
   @override
   bool canStartWeb(MediaStream mediaStream, {String mimeType = 'video/webm'}) {

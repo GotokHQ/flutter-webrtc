@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 
@@ -12,12 +11,12 @@ import 'utils.dart';
 class RTCVideoRendererNative extends VideoRenderer {
   RTCVideoRendererNative();
   final _channel = WebRTC.methodChannel();
-  int _textureId;
-  MediaStream _srcObject;
-  StreamSubscription<dynamic> _eventSubscription;
+  late int _textureId;
+  MediaStream? _srcObject;
+  late StreamSubscription<dynamic> _eventSubscription;
   bool _isReleased = false;
   final Completer<void> _creatingCompleter = Completer<void>();
-  RTCVideoAppLifeCycleObserver _lifeCycleObserver;
+  RTCVideoAppLifeCycleObserver? _lifeCycleObserver;
 
   bool get isCreated => _creatingCompleter.isCompleted;
   @override
@@ -25,7 +24,7 @@ class RTCVideoRendererNative extends VideoRenderer {
     if (isCreated) return;
     _lifeCycleObserver?.dispose();
     _lifeCycleObserver = RTCVideoAppLifeCycleObserver(this);
-    _lifeCycleObserver.initialize();
+    _lifeCycleObserver?.initialize();
 
     final response = await _channel.invokeMethod('createVideoRenderer');
     _textureId = response['textureId'];
@@ -43,10 +42,10 @@ class RTCVideoRendererNative extends VideoRenderer {
   int get videoHeight => value.size.height.toInt();
 
   @override
-  int get textureId => _textureId;
+  int? get textureId => _textureId;
 
   @override
-  MediaStream get srcObject => _srcObject;
+  MediaStream? get srcObject => _srcObject;
 
   @override
   bool operator ==(dynamic other) {
@@ -56,28 +55,24 @@ class RTCVideoRendererNative extends VideoRenderer {
   }
 
   @override
-  int get hashCode => textureId.hashCode ^ _srcObject?.id?.hashCode;
+  int get hashCode => textureId.hashCode;
 
   EventChannel _eventChannelFor(int textureId) {
     return EventChannel('FlutterWebRTC/Texture$textureId');
   }
 
   @override
-  set srcObject(MediaStream stream) {
+  set srcObject(MediaStream? stream) {
     if (textureId == null) throw 'Call initialize before setting the stream';
-
-    print("SET SRC OBJECT: $stream");
     _srcObject = stream;
     _applyStream();
   }
 
   void _applyStream() {
-    print("APPLY STREAM CALLED: $textureId");
     if (!isCreated || _srcObject == null || _isReleased) {
       return;
     }
     if (textureId == null) throw 'Call initialize before setting the stream';
-    print("ABOUT TO SET RENDERER SRC: $textureId");
     _channel.invokeMethod('videoRendererSetSrcObject', <String, dynamic>{
       'textureId': textureId,
       'streamId': _srcObject?.id ?? '',
@@ -97,18 +92,16 @@ class RTCVideoRendererNative extends VideoRenderer {
 
   @override
   Future<void> release() async {
-    if (_creatingCompleter != null) {
-      await _creatingCompleter.future;
-      if (!_isReleased) {
-        await _eventSubscription?.cancel();
-        await _channel.invokeMethod(
-          'videoRendererDispose',
-          <String, dynamic>{'textureId': _textureId},
-        );
-        _lifeCycleObserver.dispose();
-        _isReleased = true;
-        value = RTCVideoValue.uninitialized();
-      }
+    await _creatingCompleter.future;
+    if (!_isReleased) {
+      await _eventSubscription.cancel();
+      await _channel.invokeMethod(
+        'videoRendererDispose',
+        <String, dynamic>{'textureId': _textureId},
+      );
+      _lifeCycleObserver?.dispose();
+      _isReleased = true;
+      value = RTCVideoValue.uninitialized();
     }
   }
 
@@ -131,8 +124,9 @@ class RTCVideoRendererNative extends VideoRenderer {
   }
 
   void errorListener(Object obj) {
-    final PlatformException e = obj;
-    throw e;
+    if (obj is Exception) {
+      throw obj;
+    }
   }
 
   @override
@@ -183,7 +177,30 @@ class RTCVideoRendererNative extends VideoRenderer {
       value = value.copyWith(mute: old);
     });
   }
-  
+
+  @override
+  bool get mirror => value.isMirrored;
+
+  @override
+  set mirror(bool mirror) {
+    if (_isReleased) {
+      return;
+    }
+
+    if (value.isMirrored == mirror) {
+      return;
+    }
+    //final old = value.isBlurred;
+    value = value.copyWith(isMirrored: mirror);
+    // _channel.invokeMethod(
+    //   'videoRendererSetBlurred',
+    //   <String, dynamic>{'textureId': _textureId, 'blur': blur},
+    // ).catchError((error) {
+    //   print('error: $error');
+    //   value = value.copyWith(mute: old);
+    // });
+  }
+
   @override
   Future<bool> audioOutput(String deviceId) {
     // TODO(cloudwebrtc): related to https://github.com/flutter-webrtc/flutter-webrtc/issues/395

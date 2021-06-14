@@ -16,14 +16,15 @@ class GetUserMediaSample extends StatefulWidget {
 }
 
 class _GetUserMediaSampleState extends State<GetUserMediaSample> {
-  MediaStream _localStream;
+  MediaStream? _localStream;
   final _localRenderer = RTCVideoRenderer();
   bool _inCalling = false;
-  MediaRecorder _mediaRecorder;
+  MediaRecorder? _mediaRecorder;
 
-  List<MediaDeviceInfo> _cameras;
+  List<MediaDeviceInfo>? _cameras;
+
   bool get _isRec => _mediaRecorder != null;
-  List<dynamic> cameras;
+  List<dynamic>? cameras;
 
   @override
   void initState() {
@@ -81,10 +82,8 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
 
   Future<void> _stop() async {
     try {
-      if (_localStream != null) {
-        await _localStream.dispose();
-        _localStream = null;
-      }
+      await _localStream?.dispose();
+      _localStream = null;
       _localRenderer.srcObject = null;
     } catch (e) {
       print(e.toString());
@@ -99,9 +98,10 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
   }
 
   void _startRecording() async {
+    if (_localStream == null) throw Exception('Can\'t record without a stream');
     _mediaRecorder = MediaRecorder();
     setState(() {});
-    _mediaRecorder.startWeb(_localStream);
+    _mediaRecorder?.startWeb(_localStream!);
   }
 
   void _stopRecording() async {
@@ -110,22 +110,25 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
       _mediaRecorder = null;
     });
     print(objectUrl);
+    // ignore: unsafe_html
     html.window.open(objectUrl, '_blank');
   }
 
   void _captureFrame() async {
-    final videoTrack = _localStream
+    if (_localStream == null) throw Exception('Can\'t record without a stream');
+    final videoTrack = _localStream!
         .getVideoTracks()
         .firstWhere((track) => track.kind == 'video');
     final frame = await videoTrack.captureFrame();
     await showDialog(
         context: context,
         builder: (context) => AlertDialog(
-              content: Image.network(frame, height: 720, width: 1280),
+              content:
+                  Image.memory(frame.asUint8List(), height: 720, width: 1280),
               actions: <Widget>[
-                FlatButton(
-                  child: Text('OK'),
+                TextButton(
                   onPressed: Navigator.of(context, rootNavigator: true).pop,
+                  child: Text('OK'),
                 )
               ],
             ));
@@ -149,12 +152,16 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
                 PopupMenuButton<String>(
                   onSelected: _switchCamera,
                   itemBuilder: (BuildContext context) {
-                    return _cameras.map((device) {
-                      return PopupMenuItem<String>(
-                        value: device.deviceId,
-                        child: Text(device.label),
-                      );
-                    }).toList();
+                    if (_cameras != null) {
+                      return _cameras!.map((device) {
+                        return PopupMenuItem<String>(
+                          value: device.deviceId,
+                          child: Text(device.label),
+                        );
+                      }).toList();
+                    } else {
+                      return [];
+                    }
                   },
                 ),
                 // IconButton(
@@ -171,8 +178,8 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
               margin: EdgeInsets.fromLTRB(0.0, 0.0, 0.0, 0.0),
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
-              child: RTCVideoView(_localRenderer, mirror: true),
               decoration: BoxDecoration(color: Colors.black54),
+              child: RTCVideoView(_localRenderer, mirror: true),
             ),
           );
         },
@@ -186,8 +193,10 @@ class _GetUserMediaSampleState extends State<GetUserMediaSample> {
   }
 
   void _switchCamera(String deviceId) async {
+    if (_localStream == null) return;
+
     await Helper.switchCamera(
-        _localStream.getVideoTracks()[0], deviceId, _localStream);
+        _localStream!.getVideoTracks()[0], deviceId, _localStream);
     setState(() {});
   }
 }

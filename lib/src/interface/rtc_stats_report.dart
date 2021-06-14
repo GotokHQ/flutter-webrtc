@@ -1,7 +1,10 @@
 import 'utils.dart';
 
 class RTCStatsReport {
-  RTCStatsReport(this.timestamp, this.stats);
+  RTCStatsReport(
+    this.stats, {
+    this.timestamp,
+  });
   factory RTCStatsReport.fromMap(Map<String, dynamic> map) {
     var statsMap = asStringKeyedMap(map['stats']);
     final stats = statsMap.map(
@@ -10,10 +13,13 @@ class RTCStatsReport {
         StatsReport.fromMap(asStringKeyedMap(value)),
       ),
     );
-    return RTCStatsReport(map['timestamp'], stats);
+    return RTCStatsReport(
+      stats,
+      timestamp: map['timestamp'],
+    );
   }
 
-  double timestamp;
+  double? timestamp;
   Map<String, StatsReport> stats;
 
   @override

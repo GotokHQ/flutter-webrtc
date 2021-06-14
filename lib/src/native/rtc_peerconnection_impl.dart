@@ -38,15 +38,15 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
   // private:
   final String _peerConnectionId;
   final _channel = WebRTC.methodChannel();
-  StreamSubscription<dynamic> _eventSubscription;
+  StreamSubscription<dynamic>? _eventSubscription;
   final _localStreams = <MediaStream>[];
   final _remoteStreams = <MediaStream>[];
-  RTCDataChannelNative _dataChannel;
+  RTCDataChannelNative? _dataChannel;
   Map<String, dynamic> _configuration;
-  RTCSignalingState _signalingState;
-  RTCIceGatheringState _iceGatheringState;
-  RTCIceConnectionState _iceConnectionState;
-  RTCPeerConnectionState _connectionState;
+  RTCSignalingState? _signalingState;
+  RTCIceGatheringState? _iceGatheringState;
+  RTCIceConnectionState? _iceConnectionState;
+  RTCPeerConnectionState? _connectionState;
 
   final Map<String, dynamic> defaultSdpConstraints = {
     'mandatory': {
@@ -57,20 +57,21 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
   };
 
   @override
-  RTCSignalingState get signalingState => _signalingState;
+  RTCSignalingState? get signalingState => _signalingState;
 
   @override
-  RTCIceGatheringState get iceGatheringState => _iceGatheringState;
+  RTCIceGatheringState? get iceGatheringState => _iceGatheringState;
 
   @override
-  RTCIceConnectionState get iceConnectionState => _iceConnectionState;
+  RTCIceConnectionState? get iceConnectionState => _iceConnectionState;
 
   @override
-  RTCPeerConnectionState get connectionState => _connectionState;
+  RTCPeerConnectionState? get connectionState => _connectionState;
 
-  Future<RTCSessionDescription> get localDescription => getLocalDescription();
+  Future<RTCSessionDescription?> get localDescription => getLocalDescription();
 
-  Future<RTCSessionDescription> get remoteDescription => getRemoteDescription();
+  Future<RTCSessionDescription?> get remoteDescription =>
+      getRemoteDescription();
 
   /*
    * PeerConnection event listener.
@@ -81,19 +82,19 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
     switch (map['event']) {
       case 'signalingState':
         _signalingState = signalingStateForString(map['state']);
-        onSignalingState?.call(_signalingState);
+        onSignalingState?.call(_signalingState!);
         break;
       case 'peerConnectionState':
         _connectionState = peerConnectionStateForString(map['state']);
-        onConnectionState?.call(_connectionState);
+        onConnectionState?.call(_connectionState!);
         break;
       case 'iceGatheringState':
         _iceGatheringState = iceGatheringStateforString(map['state']);
-        onIceGatheringState?.call(_iceGatheringState);
+        onIceGatheringState?.call(_iceGatheringState!);
         break;
       case 'iceConnectionState':
         _iceConnectionState = iceConnectionStateForString(map['state']);
-        onIceConnectionState?.call(_iceConnectionState);
+        onIceConnectionState?.call(_iceConnectionState!);
         break;
       case 'onCandidate':
         Map<dynamic, dynamic> cand = map['candidate'];
@@ -116,11 +117,13 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
         break;
       case 'onRemoveStream':
         String streamId = map['streamId'];
-        var stream =
-            _remoteStreams.firstWhere((it) => it.id == streamId, orElse: () {
-          return null;
-        });
-        onRemoveStream?.call(stream);
+
+        for (var item in _remoteStreams) {
+          if (item.id == streamId) {
+            onRemoveStream?.call(item);
+            break;
+          }
+        }
         _remoteStreams.removeWhere((it) => it.id == streamId);
         break;
       case 'onAddTrack':
@@ -156,10 +159,7 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
         break;
       case 'onRemoveTrack':
         String streamId = map['streamId'];
-        var stream =
-            _remoteStreams.firstWhere((it) => it.id == streamId, orElse: () {
-          return null;
-        });
+        final stream = _remoteStreams.firstWhere((it) => it.id == streamId);
         Map<dynamic, dynamic> track = map['track'];
         var oldTrack = MediaStreamTrackNative(map['trackId'], track['label'],
             track['kind'], track['enabled'], track['remote']);
@@ -170,7 +170,7 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
         String label = map['label'];
         _dataChannel =
             RTCDataChannelNative(_peerConnectionId, label, dataChannelId);
-        onDataChannel?.call(_dataChannel);
+        onDataChannel?.call(_dataChannel!);
         break;
       case 'onRenegotiationNeeded':
         onRenegotiationNeeded?.call();
@@ -182,7 +182,8 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
         var streams = params.map((e) => MediaStreamNative.fromMap(e)).toList();
         var transceiver = RTCRtpTransceiverNative.fromMap(map['transceiver'],
             peerConnectionId: _peerConnectionId);
-        var receiver = RTCRtpReceiverNative.fromMap(map['receiver']);
+        var receiver = RTCRtpReceiverNative.fromMap(map['receiver'],
+            peerConnectionId: _peerConnectionId);
         var track = MediaStreamTrackNative.fromMap(map['track']);
         onTrack?.call(RTCTrackEvent(
             receiver: receiver,
@@ -221,8 +222,7 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
   }
 
   void errorListener(Object obj) {
-    final PlatformException e = obj;
-    throw e;
+    if (obj is Exception) throw obj;
   }
 
   @override
@@ -256,10 +256,10 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
 
   @override
   Future<RTCSessionDescription> createOffer(
-      [Map<String, dynamic> constraints = const {}]) async {
+      [Map<String, dynamic>? constraints]) async {
     try {
-      final response = await _channel
-          .invokeMethod<Map<dynamic, dynamic>>('createOffer', <String, dynamic>{
+      final response =
+          await WebRTC.invokeMethod('createOffer', <String, dynamic>{
         'peerConnectionId': _peerConnectionId,
         'constraints': constraints ?? defaultSdpConstraints
       });
@@ -274,13 +274,14 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
 
   @override
   Future<RTCSessionDescription> createAnswer(
-      [Map<String, dynamic> constraints]) async {
+      [Map<String, dynamic>? constraints]) async {
     try {
-      final response = await _channel.invokeMethod<Map<dynamic, dynamic>>(
-          'createAnswer', <String, dynamic>{
+      final response =
+          await WebRTC.invokeMethod('createAnswer', <String, dynamic>{
         'peerConnectionId': _peerConnectionId,
         'constraints': constraints ?? defaultSdpConstraints
       });
+
       String sdp = response['sdp'];
       String type = response['type'];
       return RTCSessionDescription(sdp, type);
@@ -332,12 +333,16 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
   }
 
   @override
-  Future<RTCSessionDescription> getLocalDescription() async {
+  Future<RTCSessionDescription?> getLocalDescription() async {
     try {
-      final response = await _channel.invokeMethod<Map<dynamic, dynamic>>(
-          'getLocalDescription', <String, dynamic>{
+      final response =
+          await WebRTC.invokeMethod('getLocalDescription', <String, dynamic>{
         'peerConnectionId': _peerConnectionId,
       });
+
+      if (null == response) {
+        return null;
+      }
       String sdp = response['sdp'];
       String type = response['type'];
       return RTCSessionDescription(sdp, type);
@@ -347,12 +352,16 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
   }
 
   @override
-  Future<RTCSessionDescription> getRemoteDescription() async {
+  Future<RTCSessionDescription?> getRemoteDescription() async {
     try {
-      final response = await _channel.invokeMethod<Map<dynamic, dynamic>>(
-          'getRemoteDescription', <String, dynamic>{
+      final response =
+          await WebRTC.invokeMethod('getRemoteDescription', <String, dynamic>{
         'peerConnectionId': _peerConnectionId,
       });
+
+      if (null == response) {
+        return null;
+      }
       String sdp = response['sdp'];
       String type = response['type'];
       return RTCSessionDescription(sdp, type);
@@ -380,7 +389,7 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
   }
 
   @override
-  Future<RTCStatsReport> getStats([MediaStreamTrack track]) async {
+  Future<RTCStatsReport?> getStats([MediaStreamTrack? track]) async {
     try {
       final response = await _channel.invokeMethod(
           'getStats', <String, dynamic>{
@@ -418,7 +427,7 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
       });
       _dataChannel =
           RTCDataChannelNative(_peerConnectionId, label, dataChannelDict.id);
-      return _dataChannel;
+      return _dataChannel!;
     } on PlatformException catch (e) {
       throw 'Unable to RTCPeerConnection::createDataChannel: ${e.message}';
     }
@@ -479,13 +488,13 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
 
   @override
   Future<RTCRtpSender> addTrack(MediaStreamTrack track,
-      [MediaStream stream]) async {
+      [MediaStream? stream]) async {
     try {
       final response =
           await _channel.invokeMethod('addTrack', <String, dynamic>{
         'peerConnectionId': _peerConnectionId,
         'trackId': track.id,
-        'streamIds': [stream.id]
+        'streamIds': [stream?.id]
       });
       return RTCRtpSenderNative.fromMap(response,
           peerConnectionId: _peerConnectionId);
@@ -511,9 +520,9 @@ class RTCPeerConnectionNative extends RTCPeerConnection {
 
   @override
   Future<RTCRtpTransceiver> addTransceiver(
-      {MediaStreamTrack track,
-      RTCRtpMediaType kind,
-      RTCRtpTransceiverInit init}) async {
+      {MediaStreamTrack? track,
+      RTCRtpMediaType? kind,
+      RTCRtpTransceiverInit? init}) async {
     try {
       final response =
           await _channel.invokeMethod('addTransceiver', <String, dynamic>{

@@ -561,210 +561,210 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
         return null;
     }
 
-  @Nullable
-  private String transceiverDirectionString(RtpTransceiver.RtpTransceiverDirection direction) {
-      switch (direction) {
-          case SEND_RECV:
-              return "sendrecv";
-          case SEND_ONLY:
-              return "sendonly";
-          case RECV_ONLY:
-              return "recvonly";
-          case INACTIVE:
-              return "inactive";
-      }
-      return null;
-  }
-
-  private RtpTransceiver.RtpTransceiverDirection stringToTransceiverDirection(String direction) {
-      switch (direction) {
-          case "sendrecv":
-              return RtpTransceiver.RtpTransceiverDirection.SEND_RECV;
-          case "sendonly":
-              return RtpTransceiver.RtpTransceiverDirection.SEND_ONLY;
-          case "recvonly":
-              return RtpTransceiver.RtpTransceiverDirection.RECV_ONLY;
-          case "inactive":
-              return RtpTransceiver.RtpTransceiverDirection.INACTIVE;
-      }
-      return RtpTransceiver.RtpTransceiverDirection.INACTIVE;
-  }
-
-  private MediaStreamTrack.MediaType stringToMediaType(String mediaType) {
-      MediaStreamTrack.MediaType type = MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO;
-      if(mediaType.equals("audio"))
-          type = MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO;
-      else if(mediaType.equals("video"))
-          type = MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO;
-      return type;
-  }
-
-  private RtpParameters.Encoding mapToEncoding(Map<String, Object> parameters) {
-      RtpParameters.Encoding encoding = new RtpParameters.Encoding((String)parameters.get("rid"), true, 1.0);
-
-      if( parameters.get("active") != null) {
-          encoding.active = (Boolean) parameters.get("active");
-      }
-
-      if( parameters.get("ssrc") != null) {
-          encoding.ssrc = ((Integer) parameters.get("ssrc")).longValue();
-      }
-
-      if( parameters.get("minBitrate") != null) {
-          encoding.minBitrateBps = (Integer) parameters.get("minBitrate");
-      }
-
-      if( parameters.get("maxBitrate") != null) {
-          encoding.maxBitrateBps = (Integer) parameters.get("maxBitrate");
-      }
-
-      if( parameters.get("maxFramerate") != null) {
-          encoding.maxFramerate = (Integer) parameters.get("maxFramerate");
-      }
-
-      if( parameters.get("numTemporalLayers") != null) {
-          encoding.numTemporalLayers = (Integer) parameters.get("numTemporalLayers");
-      }
-
-      if( parameters.get("scaleResolutionDownBy") != null) {
-          encoding.scaleResolutionDownBy = (Double) parameters.get("scaleResolutionDownBy");
-      }
-
-      return  encoding;
-  }
-
-  private RtpTransceiver.RtpTransceiverInit mapToRtpTransceiverInit(Map<String, Object> parameters) {
-      List<String> streamIds =  (List)parameters.get("streamIds");
-      List<Map<String, Object>> encodingsParams = (List<Map<String, Object>>)parameters.get("sendEncodings");
-      String direction = (String)parameters.get("direction");
-      List<RtpParameters.Encoding> sendEncodings = new ArrayList<>();
-      RtpTransceiver.RtpTransceiverInit init = null;
-
-      if(streamIds == null) {
-          streamIds = new ArrayList<String>();
-      }
-
-      if(direction == null) {
-          direction = "sendrecv";
-      }
-
-      if(encodingsParams != null) {
-          for (int i=0;i< encodingsParams.size();i++){
-              Map<String, Object> params = encodingsParams.get(i);
-              sendEncodings.add(0, mapToEncoding(params));
-          }
-          init = new RtpTransceiver.RtpTransceiverInit(stringToTransceiverDirection(direction) ,streamIds, sendEncodings);
-      } else {
-          init = new RtpTransceiver.RtpTransceiverInit(stringToTransceiverDirection(direction) ,streamIds);
-      }
-      return  init;
-  }
-
-  private RtpParameters updateRtpParameters(Map<String, Object> newParameters, RtpParameters parameters){
-    List<Map<String, Object>> encodings = (List<Map<String, Object>>) newParameters.get("encodings");
-    final Iterator encodingsIterator = encodings.iterator();
-    final Iterator nativeEncodingsIterator = parameters.encodings.iterator();
-    while(encodingsIterator.hasNext() && nativeEncodingsIterator.hasNext()){
-      final RtpParameters.Encoding nativeEncoding = (RtpParameters.Encoding) nativeEncodingsIterator.next();
-      final Map<String, Object> encoding = (Map<String, Object>) encodingsIterator.next();
-      if(encoding.containsKey("active")){
-        nativeEncoding.active =  (Boolean) encoding.get("active");
-      }
-      if (encoding.containsKey("maxBitrate")) {
-        nativeEncoding.maxBitrateBps = (Integer) encoding.get("maxBitrate");
-      }
-      if (encoding.containsKey("minBitrate")) {
-        nativeEncoding.minBitrateBps = (Integer) encoding.get("minBitrate");
-      }
-      if (encoding.containsKey("maxFramerate")) {
-        nativeEncoding.maxFramerate = (Integer) encoding.get("maxFramerate");
-      }
-      if (encoding.containsKey("numTemporalLayers")) {
-        nativeEncoding.numTemporalLayers = (Integer) encoding.get("numTemporalLayers");
-      }
-      if (encoding.containsKey("scaleResolutionDownBy") ) {
-        nativeEncoding.scaleResolutionDownBy = (Double) encoding.get("scaleResolutionDownBy");
-      }
+    @Nullable
+    private String transceiverDirectionString(RtpTransceiver.RtpTransceiverDirection direction) {
+        switch (direction) {
+            case SEND_RECV:
+                return "sendrecv";
+            case SEND_ONLY:
+                return "sendonly";
+            case RECV_ONLY:
+                return "recvonly";
+            case INACTIVE:
+                return "inactive";
+        }
+        return null;
     }
-    return parameters;
-  }
 
-  private Map<String, Object> rtpParametersToMap(RtpParameters rtpParameters){
-      ConstraintsMap info = new ConstraintsMap();
-      info.putString("transactionId", rtpParameters.transactionId);
+    private RtpTransceiver.RtpTransceiverDirection stringToTransceiverDirection(String direction) {
+        switch (direction) {
+            case "sendrecv":
+                return RtpTransceiver.RtpTransceiverDirection.SEND_RECV;
+            case "sendonly":
+                return RtpTransceiver.RtpTransceiverDirection.SEND_ONLY;
+            case "recvonly":
+                return RtpTransceiver.RtpTransceiverDirection.RECV_ONLY;
+            case "inactive":
+                return RtpTransceiver.RtpTransceiverDirection.INACTIVE;
+        }
+        return RtpTransceiver.RtpTransceiverDirection.INACTIVE;
+    }
 
-      ConstraintsMap rtcp = new ConstraintsMap();
-      rtcp.putString("cname", rtpParameters.getRtcp().getCname());
-      rtcp.putBoolean("reducedSize",  rtpParameters.getRtcp().getReducedSize());
-      info.putMap("rtcp", rtcp.toMap());
+    private MediaStreamTrack.MediaType stringToMediaType(String mediaType) {
+        MediaStreamTrack.MediaType type = MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO;
+        if(mediaType.equals("audio"))
+            type = MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO;
+        else if(mediaType.equals("video"))
+            type = MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO;
+        return type;
+    }
 
-      ConstraintsArray headerExtensions = new ConstraintsArray();
-      for(RtpParameters.HeaderExtension extension : rtpParameters.getHeaderExtensions()){
-          ConstraintsMap map = new ConstraintsMap();
-          map.putString("uri",extension.getUri());
-          map.putInt("id", extension.getId());
-          map.putBoolean("encrypted", extension.getEncrypted());
-          headerExtensions.pushMap(map);
-      }
-      info.putArray("headerExtensions", headerExtensions.toArrayList());
+    private RtpParameters.Encoding mapToEncoding(Map<String, Object> parameters) {
+        RtpParameters.Encoding encoding = new RtpParameters.Encoding((String)parameters.get("rid"), true, 1.0);
 
-      ConstraintsArray encodings = new ConstraintsArray();
-      for(RtpParameters.Encoding encoding : rtpParameters.encodings){
-          ConstraintsMap map = new ConstraintsMap();
-          map.putBoolean("active",encoding.active);
-          if (encoding.maxBitrateBps != null) {
-              map.putInt("maxBitrate", encoding.maxBitrateBps);
-          }
-          if (encoding.minBitrateBps != null) {
-              map.putInt("minBitrate", encoding.minBitrateBps);
-          }
-          if (encoding.maxFramerate != null) {
-              map.putInt("maxFramerate", encoding.maxFramerate);
-          }
-          if (encoding.numTemporalLayers != null) {
-              map.putInt("numTemporalLayers", encoding.numTemporalLayers);
-          }
-          if (encoding.scaleResolutionDownBy != null) {
-              map.putDouble("scaleResolutionDownBy", encoding.scaleResolutionDownBy);
-          }
-          if (encoding.ssrc != null) {
-              map.putLong("ssrc", encoding.ssrc);
-          }
-          encodings.pushMap(map);
-      }
-      info.putArray("encodings", encodings.toArrayList());
+        if( parameters.get("active") != null) {
+            encoding.active = (Boolean) parameters.get("active");
+        }
 
-      ConstraintsArray codecs = new ConstraintsArray();
-      for(RtpParameters.Codec codec : rtpParameters.codecs){
-          ConstraintsMap map = new ConstraintsMap();
-          map.putString("name",codec.name);
-          map.putInt("payloadType", codec.payloadType);
-          map.putInt("clockRate", codec.clockRate);
-          if (codec.numChannels != null) {
-              map.putInt("numChannels", codec.numChannels);
-          }
-          map.putMap("parameters", new HashMap<String, Object>(codec.parameters));
-          try {
-              Field field = codec.getClass().getDeclaredField("kind");
-              field.setAccessible(true);
-              if (field.get(codec).equals(MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO)) {
-                  map.putString("kind", "audio");
-              } else if(field.get(codec).equals(MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO)) {
-                  map.putString("kind", "video");
-              }
-          } catch (NoSuchFieldException e1) {
-              e1.printStackTrace();
-          } catch (IllegalArgumentException e1) {
-              e1.printStackTrace();
-          } catch (IllegalAccessException e1) {
-              e1.printStackTrace();
-          }
-          codecs.pushMap(map);
-      }
+        if( parameters.get("ssrc") != null) {
+            encoding.ssrc = ((Integer) parameters.get("ssrc")).longValue();
+        }
 
-      info.putArray("codecs", codecs.toArrayList());
-      return info.toMap();
-  }
+        if( parameters.get("minBitrate") != null) {
+            encoding.minBitrateBps = (Integer) parameters.get("minBitrate");
+        }
+
+        if( parameters.get("maxBitrate") != null) {
+            encoding.maxBitrateBps = (Integer) parameters.get("maxBitrate");
+        }
+
+        if( parameters.get("maxFramerate") != null) {
+            encoding.maxFramerate = (Integer) parameters.get("maxFramerate");
+        }
+
+        if( parameters.get("numTemporalLayers") != null) {
+            encoding.numTemporalLayers = (Integer) parameters.get("numTemporalLayers");
+        }
+
+        if( parameters.get("scaleResolutionDownBy") != null) {
+            encoding.scaleResolutionDownBy = (Double) parameters.get("scaleResolutionDownBy");
+        }
+
+        return  encoding;
+    }
+
+    private RtpTransceiver.RtpTransceiverInit mapToRtpTransceiverInit(Map<String, Object> parameters) {
+        List<String> streamIds =  (List)parameters.get("streamIds");
+        List<Map<String, Object>> encodingsParams = (List<Map<String, Object>>)parameters.get("sendEncodings");
+        String direction = (String)parameters.get("direction");
+        List<RtpParameters.Encoding> sendEncodings = new ArrayList<>();
+        RtpTransceiver.RtpTransceiverInit init = null;
+
+        if(streamIds == null) {
+            streamIds = new ArrayList<String>();
+        }
+
+        if(direction == null) {
+            direction = "sendrecv";
+        }
+
+        if(encodingsParams != null) {
+            for (int i=0;i< encodingsParams.size();i++){
+                Map<String, Object> params = encodingsParams.get(i);
+                sendEncodings.add(0, mapToEncoding(params));
+            }
+            init = new RtpTransceiver.RtpTransceiverInit(stringToTransceiverDirection(direction) ,streamIds, sendEncodings);
+        } else {
+            init = new RtpTransceiver.RtpTransceiverInit(stringToTransceiverDirection(direction) ,streamIds);
+        }
+        return  init;
+    }
+
+    private RtpParameters updateRtpParameters(Map<String, Object> newParameters, RtpParameters parameters){
+        List<Map<String, Object>> encodings = (List<Map<String, Object>>) newParameters.get("encodings");
+        final Iterator encodingsIterator = encodings.iterator();
+        final Iterator nativeEncodingsIterator = parameters.encodings.iterator();
+        while(encodingsIterator.hasNext() && nativeEncodingsIterator.hasNext()){
+            final RtpParameters.Encoding nativeEncoding = (RtpParameters.Encoding) nativeEncodingsIterator.next();
+            final Map<String, Object> encoding = (Map<String, Object>) encodingsIterator.next();
+            if(encoding.containsKey("active")){
+                nativeEncoding.active =  (Boolean) encoding.get("active");
+            }
+            if (encoding.containsKey("maxBitrate")) {
+                nativeEncoding.maxBitrateBps = (Integer) encoding.get("maxBitrate");
+            }
+            if (encoding.containsKey("minBitrate")) {
+                nativeEncoding.minBitrateBps = (Integer) encoding.get("minBitrate");
+            }
+            if (encoding.containsKey("maxFramerate")) {
+                nativeEncoding.maxFramerate = (Integer) encoding.get("maxFramerate");
+            }
+            if (encoding.containsKey("numTemporalLayers")) {
+                nativeEncoding.numTemporalLayers = (Integer) encoding.get("numTemporalLayers");
+            }
+            if (encoding.containsKey("scaleResolutionDownBy") ) {
+                nativeEncoding.scaleResolutionDownBy = (Double) encoding.get("scaleResolutionDownBy");
+            }
+        }
+        return parameters;
+    }
+
+    private Map<String, Object> rtpParametersToMap(RtpParameters rtpParameters){
+        ConstraintsMap info = new ConstraintsMap();
+        info.putString("transactionId", rtpParameters.transactionId);
+
+        ConstraintsMap rtcp = new ConstraintsMap();
+        rtcp.putString("cname", rtpParameters.getRtcp().getCname());
+        rtcp.putBoolean("reducedSize",  rtpParameters.getRtcp().getReducedSize());
+        info.putMap("rtcp", rtcp.toMap());
+
+        ConstraintsArray headerExtensions = new ConstraintsArray();
+        for(RtpParameters.HeaderExtension extension : rtpParameters.getHeaderExtensions()){
+            ConstraintsMap map = new ConstraintsMap();
+            map.putString("uri",extension.getUri());
+            map.putInt("id", extension.getId());
+            map.putBoolean("encrypted", extension.getEncrypted());
+            headerExtensions.pushMap(map);
+        }
+        info.putArray("headerExtensions", headerExtensions.toArrayList());
+
+        ConstraintsArray encodings = new ConstraintsArray();
+        for(RtpParameters.Encoding encoding : rtpParameters.encodings){
+            ConstraintsMap map = new ConstraintsMap();
+            map.putBoolean("active",encoding.active);
+            if (encoding.maxBitrateBps != null) {
+                map.putInt("maxBitrate", encoding.maxBitrateBps);
+            }
+            if (encoding.minBitrateBps != null) {
+                map.putInt("minBitrate", encoding.minBitrateBps);
+            }
+            if (encoding.maxFramerate != null) {
+                map.putInt("maxFramerate", encoding.maxFramerate);
+            }
+            if (encoding.numTemporalLayers != null) {
+                map.putInt("numTemporalLayers", encoding.numTemporalLayers);
+            }
+            if (encoding.scaleResolutionDownBy != null) {
+                map.putDouble("scaleResolutionDownBy", encoding.scaleResolutionDownBy);
+            }
+            if (encoding.ssrc != null) {
+                map.putLong("ssrc", encoding.ssrc);
+            }
+            encodings.pushMap(map);
+        }
+        info.putArray("encodings", encodings.toArrayList());
+
+        ConstraintsArray codecs = new ConstraintsArray();
+        for(RtpParameters.Codec codec : rtpParameters.codecs){
+            ConstraintsMap map = new ConstraintsMap();
+            map.putString("name",codec.name);
+            map.putInt("payloadType", codec.payloadType);
+            map.putInt("clockRate", codec.clockRate);
+            if (codec.numChannels != null) {
+                map.putInt("numChannels", codec.numChannels);
+            }
+            map.putMap("parameters", new HashMap<String, Object>(codec.parameters));
+            try {
+                Field field = codec.getClass().getDeclaredField("kind");
+                field.setAccessible(true);
+                if (field.get(codec).equals(MediaStreamTrack.MediaType.MEDIA_TYPE_AUDIO)) {
+                    map.putString("kind", "audio");
+                } else if(field.get(codec).equals(MediaStreamTrack.MediaType.MEDIA_TYPE_VIDEO)) {
+                    map.putString("kind", "video");
+                }
+            } catch (NoSuchFieldException e1) {
+                e1.printStackTrace();
+            } catch (IllegalArgumentException e1) {
+                e1.printStackTrace();
+            } catch (IllegalAccessException e1) {
+                e1.printStackTrace();
+            }
+            codecs.pushMap(map);
+        }
+
+        info.putArray("codecs", codecs.toArrayList());
+        return info.toMap();
+    }
 
     @Nullable
     private Map<String, Object> mediaStreamToMap(MediaStream stream) {
@@ -787,123 +787,123 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
         return params.toMap();
     }
 
-  @Nullable
-  private Map<String, Object> mediaTrackToMap(MediaStreamTrack track){
-      ConstraintsMap info = new ConstraintsMap();
-      if(track != null){
-          info.putString("id", track.id());
-          info.putString("label",track.getClass() == VideoTrack.class? "video": "audio");
-          info.putString("kind",track.kind());
-          info.putBoolean("enabled", track.enabled());
-          info.putString("readyState", track.state().toString());
-          info.putString("readyState", track.state().toString());
-      }
-      return info.toMap();
-  }
+    @Nullable
+    private Map<String, Object> mediaTrackToMap(MediaStreamTrack track){
+        ConstraintsMap info = new ConstraintsMap();
+        if(track != null){
+            info.putString("id", track.id());
+            info.putString("label",track.getClass() == VideoTrack.class? "video": "audio");
+            info.putString("kind",track.kind());
+            info.putBoolean("enabled", track.enabled());
+            info.putString("readyState", track.state().toString());
+            info.putString("readyState", track.state().toString());
+        }
+        return info.toMap();
+    }
 
-  private Map<String, Object> dtmfSenderToMap(DtmfSender dtmfSender, String id){
-      ConstraintsMap info = new ConstraintsMap();
-      info.putString("dtmfSenderId",id);
-      if (dtmfSender != null) {
-          info.putInt("interToneGap", dtmfSender.interToneGap());
-          info.putInt("duration", dtmfSender.duration());
-      }
-      return info.toMap();
-  }
+    private Map<String, Object> dtmfSenderToMap(DtmfSender dtmfSender, String id){
+        ConstraintsMap info = new ConstraintsMap();
+        info.putString("dtmfSenderId",id);
+        if (dtmfSender != null) {
+            info.putInt("interToneGap", dtmfSender.interToneGap());
+            info.putInt("duration", dtmfSender.duration());
+        }
+        return info.toMap();
+    }
 
-  private Map<String, Object> rtpSenderToMap(RtpSender sender){
-      ConstraintsMap info = new ConstraintsMap();
-      info.putString("senderId", sender.id());
-      info.putBoolean("ownsTrack", true);
-      info.putMap("dtmfSender", dtmfSenderToMap(sender.dtmf(), sender.id()));
-      info.putMap("rtpParameters", rtpParametersToMap(sender.getParameters()));
-      info.putMap("track", mediaTrackToMap(sender.track()));
-      return info.toMap();
-  }
+    private Map<String, Object> rtpSenderToMap(RtpSender sender){
+        ConstraintsMap info = new ConstraintsMap();
+        info.putString("senderId", sender.id());
+        info.putBoolean("ownsTrack", true);
+        info.putMap("dtmfSender", dtmfSenderToMap(sender.dtmf(), sender.id()));
+        info.putMap("rtpParameters", rtpParametersToMap(sender.getParameters()));
+        info.putMap("track", mediaTrackToMap(sender.track()));
+        return info.toMap();
+    }
 
-  private Map<String, Object> rtpReceiverToMap(RtpReceiver receiver){
-      ConstraintsMap info = new ConstraintsMap();
-      info.putString("receiverId", receiver.id());
-      info.putMap("rtpParameters", rtpParametersToMap(receiver.getParameters()));
-      info.putMap("track", mediaTrackToMap(receiver.track()));
-      return info.toMap();
-  }
+    private Map<String, Object> rtpReceiverToMap(RtpReceiver receiver){
+        ConstraintsMap info = new ConstraintsMap();
+        info.putString("receiverId", receiver.id());
+        info.putMap("rtpParameters", rtpParametersToMap(receiver.getParameters()));
+        info.putMap("track", mediaTrackToMap(receiver.track()));
+        return info.toMap();
+    }
 
-  Map<String, Object> transceiverToMap(RtpTransceiver transceiver){
-      ConstraintsMap info = new ConstraintsMap();
-      info.putString("transceiverId", transceiver.getMid());
-      info.putString("mid", transceiver.getMid());
-      info.putString("direction", transceiverDirectionString(transceiver.getDirection()));
-      info.putMap("sender", rtpSenderToMap(transceiver.getSender()));
-      info.putMap("receiver", rtpReceiverToMap(transceiver.getReceiver()));
-      return info.toMap();
-  }
+    Map<String, Object> transceiverToMap(RtpTransceiver transceiver){
+        ConstraintsMap info = new ConstraintsMap();
+        info.putString("transceiverId", transceiver.getMid());
+        info.putString("mid", transceiver.getMid());
+        info.putString("direction", transceiverDirectionString(transceiver.getDirection()));
+        info.putMap("sender", rtpSenderToMap(transceiver.getSender()));
+        info.putMap("receiver", rtpReceiverToMap(transceiver.getReceiver()));
+        return info.toMap();
+    }
 
-  Map<String, Object> candidateToMap(IceCandidate candidate) {
-      ConstraintsMap candidateParams = new ConstraintsMap();
-      candidateParams.putInt("sdpMLineIndex", candidate.sdpMLineIndex);
-      candidateParams.putString("sdpMid", candidate.sdpMid);
-      candidateParams.putString("candidate", candidate.sdp);
-      return candidateParams.toMap();
-  }
+    Map<String, Object> candidateToMap(IceCandidate candidate) {
+        ConstraintsMap candidateParams = new ConstraintsMap();
+        candidateParams.putInt("sdpMLineIndex", candidate.sdpMLineIndex);
+        candidateParams.putString("sdpMid", candidate.sdpMid);
+        candidateParams.putString("candidate", candidate.sdp);
+        return candidateParams.toMap();
+    }
 
-  public void addTrack(MediaStreamTrack track, List<String> streamIds, Result result){
-      RtpSender sender = peerConnection.addTrack(track, streamIds);
-      result.success(rtpSenderToMap(sender));
-  }
+    public void addTrack(MediaStreamTrack track, List<String> streamIds, Result result){
+        RtpSender sender = peerConnection.addTrack(track, streamIds);
+        result.success(rtpSenderToMap(sender));
+    }
 
-  public void removeTrack(String senderId, Result result){
-      RtpSender sender = getRtpSenderById(senderId);
-      if(sender == null){
-          resultError("removeTrack", "sender is null", result);
-          return;
-      }
-      boolean res = peerConnection.removeTrack(sender);
-      Map<String, Object> params = new HashMap<>();
-      params.put("result", res);
-      result.success(params);
-  }
+    public void removeTrack(String senderId, Result result){
+        RtpSender sender = getRtpSenderById(senderId);
+        if(sender == null){
+            resultError("removeTrack", "sender is null", result);
+            return;
+        }
+        boolean res = peerConnection.removeTrack(sender);
+        Map<String, Object> params = new HashMap<>();
+        params.put("result", res);
+        result.success(params);
+    }
 
-  public void addTransceiver(MediaStreamTrack track, Map<String, Object> transceiverInit,  Result result) {
-      RtpTransceiver  transceiver;
-      if(transceiverInit != null){
-          transceiver = peerConnection.addTransceiver(track, mapToRtpTransceiverInit(transceiverInit));
-      } else {
-          transceiver = peerConnection.addTransceiver(track);
-      }
-      result.success(transceiverToMap(transceiver));
-  }
+    public void addTransceiver(MediaStreamTrack track, Map<String, Object> transceiverInit,  Result result) {
+        RtpTransceiver  transceiver;
+        if(transceiverInit != null){
+            transceiver = peerConnection.addTransceiver(track, mapToRtpTransceiverInit(transceiverInit));
+        } else {
+            transceiver = peerConnection.addTransceiver(track);
+        }
+        result.success(transceiverToMap(transceiver));
+    }
 
-  public void addTransceiverOfType(String mediaType, Map<String, Object> transceiverInit,  Result result) {
-      RtpTransceiver  transceiver;
-      if(transceiverInit != null){
-          transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType), mapToRtpTransceiverInit(transceiverInit));
-      } else {
-          transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType));
-      }
-      result.success(transceiverToMap(transceiver));
-  }
+    public void addTransceiverOfType(String mediaType, Map<String, Object> transceiverInit,  Result result) {
+        RtpTransceiver  transceiver;
+        if(transceiverInit != null){
+            transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType), mapToRtpTransceiverInit(transceiverInit));
+        } else {
+            transceiver = peerConnection.addTransceiver(stringToMediaType(mediaType));
+        }
+        result.success(transceiverToMap(transceiver));
+    }
 
-  public void rtpTransceiverSetDirection(String direction, String transceiverId, Result result) {
-      RtpTransceiver transceiver = getRtpTransceiverById(transceiverId);
-      if (transceiver == null) {
-          resultError("rtpTransceiverSetDirection", "transceiver is null", result);
-          return;
-      }
-      transceiver.setDirection(stringToTransceiverDirection(direction));
-      result.success(null);
-  }
+    public void rtpTransceiverSetDirection(String direction, String transceiverId, Result result) {
+        RtpTransceiver transceiver = getRtpTransceiverById(transceiverId);
+        if (transceiver == null) {
+            resultError("rtpTransceiverSetDirection", "transceiver is null", result);
+            return;
+        }
+        transceiver.setDirection(stringToTransceiverDirection(direction));
+        result.success(null);
+    }
 
-  public void rtpTransceiverGetCurrentDirection(String transceiverId, Result result) {
-      RtpTransceiver transceiver = getRtpTransceiverById(transceiverId);
-      if (transceiver == null) {
-          resultError("rtpTransceiverGetCurrentDirection", "transceiver is null", result);
-          return;
-      }
-      ConstraintsMap params = new ConstraintsMap();
-      params.putString("result", transceiverDirectionString(transceiver.getDirection()));
-      result.success(params.toMap());
-  }
+    public void rtpTransceiverGetCurrentDirection(String transceiverId, Result result) {
+        RtpTransceiver transceiver = getRtpTransceiverById(transceiverId);
+        if (transceiver == null) {
+            resultError("rtpTransceiverGetCurrentDirection", "transceiver is null", result);
+            return;
+        }
+        ConstraintsMap params = new ConstraintsMap();
+        params.putString("result", transceiverDirectionString(transceiver.getDirection()));
+        result.success(params.toMap());
+    }
 
     public void rtpTransceiverStop(String transceiverId, Result result) {
         RtpTransceiver transceiver = getRtpTransceiverById(transceiverId);
@@ -949,36 +949,36 @@ class PeerConnectionObserver implements PeerConnection.Observer, EventChannel.St
     }
 
     public void getSenders(Result result) {
-      List<RtpSender> senders = peerConnection.getSenders();
-      ConstraintsArray sendersParams = new ConstraintsArray();
-      for(RtpSender sender : senders){
-        sendersParams.pushMap(new ConstraintsMap(rtpSenderToMap(sender)));
-      }
-      ConstraintsMap params = new ConstraintsMap();
-      params.putArray("senders", sendersParams.toArrayList());
-      result.success(params.toMap());
+        List<RtpSender> senders = peerConnection.getSenders();
+        ConstraintsArray sendersParams = new ConstraintsArray();
+        for(RtpSender sender : senders){
+            sendersParams.pushMap(new ConstraintsMap(rtpSenderToMap(sender)));
+        }
+        ConstraintsMap params = new ConstraintsMap();
+        params.putArray("senders", sendersParams.toArrayList());
+        result.success(params.toMap());
     }
-  
+
     public void getReceivers(Result result) {
-      List<RtpReceiver> receivers = peerConnection.getReceivers();
-      ConstraintsArray receiversParams = new ConstraintsArray();
-      for(RtpReceiver receiver : receivers){
-        receiversParams.pushMap(new ConstraintsMap(rtpReceiverToMap(receiver)));
-      }
-      ConstraintsMap params = new ConstraintsMap();
-      params.putArray("receivers", receiversParams.toArrayList());
-      result.success(params.toMap());
+        List<RtpReceiver> receivers = peerConnection.getReceivers();
+        ConstraintsArray receiversParams = new ConstraintsArray();
+        for(RtpReceiver receiver : receivers){
+            receiversParams.pushMap(new ConstraintsMap(rtpReceiverToMap(receiver)));
+        }
+        ConstraintsMap params = new ConstraintsMap();
+        params.putArray("receivers", receiversParams.toArrayList());
+        result.success(params.toMap());
     }
-  
+
     public void getTransceivers(Result result) {
-      List<RtpTransceiver> transceivers = peerConnection.getTransceivers();
-      ConstraintsArray transceiversParams = new ConstraintsArray();
-      for(RtpTransceiver receiver : transceivers){
-        transceiversParams.pushMap(new ConstraintsMap(transceiverToMap(receiver)));
-      }
-      ConstraintsMap params = new ConstraintsMap();
-      params.putArray("transceivers", transceiversParams.toArrayList());
-      result.success(params.toMap());
+        List<RtpTransceiver> transceivers = peerConnection.getTransceivers();
+        ConstraintsArray transceiversParams = new ConstraintsArray();
+        for(RtpTransceiver receiver : transceivers){
+            transceiversParams.pushMap(new ConstraintsMap(transceiverToMap(receiver)));
+        }
+        ConstraintsMap params = new ConstraintsMap();
+        params.putArray("transceivers", transceiversParams.toArrayList());
+        result.success(params.toMap());
     }
 
     protected MediaStreamTrack getTransceiversTrack(String trackId) {

@@ -10,7 +10,7 @@ class RTCVideoAppLifeCycleObserver extends Object with WidgetsBindingObserver {
   final VideoRenderer _controller;
 
   void initialize() {
-    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance?.addObserver(this);
   }
 
   @override
@@ -27,43 +27,43 @@ class RTCVideoAppLifeCycleObserver extends Object with WidgetsBindingObserver {
   }
 
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
+    WidgetsBinding.instance?.removeObserver(this);
   }
 }
 
 @immutable
 class RTCVideoValue {
   RTCVideoValue({
-    @required this.size,
+    this.size = Size.zero,
     this.rotation = 0,
     this.errorDescription,
-    this.firstFrameRendered,
-    this.isMirrored,
+    this.firstFrameRendered = false,
+    this.isMirrored = false,
     this.isBlurred = false,
     this.mute = true,
     this.renderVideo = false,
   });
 
-  RTCVideoValue.uninitialized() : this(size: null);
+  RTCVideoValue.uninitialized() : this();
 
   RTCVideoValue.erroneous(String errorDescription)
-      : this(size: null, errorDescription: errorDescription);
+      : this(errorDescription: errorDescription);
 
   final int rotation;
   final bool firstFrameRendered;
   final bool isMirrored;
   final bool isBlurred;
   final bool mute;
-  final String errorDescription;
+  final String? errorDescription;
   final bool renderVideo;
 
   final Size size;
 
-  bool get initialized => size != null;
+  bool get initialized => size.width != 0 && size.height != 0;
   bool get hasError => errorDescription != null;
 
   double get aspectRatio {
-    if (size == null || size.width == 0 || size.height == 0) {
+    if (size.width == 0 || size.height == 0) {
       return 1.0;
     }
     return (rotation == 90 || rotation == 270)
@@ -83,14 +83,14 @@ class RTCVideoValue {
           hashCode == other.hashCode;
 
   RTCVideoValue copyWith({
-    Size size,
-    int rotation,
-    bool firstFrameRendered,
-    String errorDescription,
-    bool isMirrored,
-    bool mute,
-    bool isBlurred,
-    bool renderVideo,
+    Size? size,
+    int? rotation,
+    bool? firstFrameRendered,
+    String? errorDescription,
+    bool? isMirrored,
+    bool? mute,
+    bool? isBlurred,
+    bool? renderVideo,
   }) {
     return RTCVideoValue(
       size: size ?? this.size,
@@ -121,7 +121,7 @@ class RTCVideoValue {
 abstract class VideoRenderer extends ValueNotifier<RTCVideoValue> {
   VideoRenderer() : super(RTCVideoValue.uninitialized());
 
-  Function onResize;
+  Function? onResize;
 
   int get videoWidth;
 
@@ -134,15 +134,18 @@ abstract class VideoRenderer extends ValueNotifier<RTCVideoValue> {
   Future<bool> audioOutput(String deviceId);
 
   bool get renderVideo;
-  int get textureId;
+  int? get textureId;
 
   Future<void> initialize();
 
-  MediaStream get srcObject;
-  set srcObject(MediaStream stream);
+  MediaStream? get srcObject;
+  set srcObject(MediaStream? stream);
 
   bool get blurred;
   set blurred(bool blur);
+
+  bool get mirror;
+  set mirror(bool mirror);
 
   @override
   @mustCallSuper

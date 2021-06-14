@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/src/helper.dart';
 
@@ -9,10 +10,10 @@ class MediaStreamTrackValue {
   const MediaStreamTrackValue(
       {this.id,
       this.label,
-      this.remote,
+      this.remote = false,
       this.kind,
-      this.enabled,
-      this.switched,
+      this.enabled = true,
+      this.switched = false,
       this.switching = false,
       this.running = true,
       this.speakerEnabled = true,
@@ -32,10 +33,10 @@ class MediaStreamTrackValue {
           speakerEnabling: false,
         );
 
-  final String id;
-  final String label;
+  final String? id;
+  final String? label;
   final bool remote;
-  final String kind;
+  final String? kind;
   final bool enabled;
   final bool switching;
   final bool switched;
@@ -44,16 +45,16 @@ class MediaStreamTrackValue {
   final bool speakerEnabling;
 
   MediaStreamTrackValue copyWith({
-    String id,
-    String label,
-    bool remote,
-    String kind,
-    bool enabled,
-    bool switched,
-    bool switching,
-    bool running,
-    bool speakerEnabled,
-    bool speakerEnabling,
+    String? id,
+    String? label,
+    bool? remote,
+    String? kind,
+    bool? enabled,
+    bool? switched,
+    bool? switching,
+    bool? running,
+    bool? speakerEnabled,
+    bool? speakerEnabling,
   }) {
     return MediaStreamTrackValue(
       id: id ?? this.id,
@@ -87,14 +88,14 @@ class MediaStreamTrackValue {
 
 abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
   MediaStreamTrack({
-    String id,
-    String label,
-    String kind,
-    bool enabled,
-    bool remote,
-    bool switched,
-    bool switching,
-    bool running,
+    String? id,
+    String? label,
+    String? kind,
+    required bool enabled,
+    required bool remote,
+    required bool switched,
+    required bool switching,
+    required bool running,
   }) : super(MediaStreamTrackValue(
           id: id,
           label: label,
@@ -106,9 +107,9 @@ abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
           running: running,
         ));
 
-  String get id => value.id;
-  String get label => value.label;
-  String get kind => value.kind;
+  String? get id => value.id!;
+  String? get label => value.label!;
+  String? get kind => value.kind!;
   bool get remote => value.remote;
   bool get enabled => value.enabled;
   bool get switched => value.switched;
@@ -129,7 +130,7 @@ abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
   Future<void> start();
 
   /// Returns true if the track is muted, and false otherwise.
-  bool get muted;
+  bool? get muted;
 
   /// Returns a map containing the set of constraints most recently established
   /// for the track using a prior call to applyConstraints().
@@ -146,7 +147,7 @@ abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
   /// These constraints let the Web site or app establish ideal values and
   /// acceptable ranges of values for the constrainable properties of the track,
   /// such as frame rate, dimensions, echo cancelation, and so forth.
-  Future<void> applyConstraints([Map<String, dynamic> constraints]) {
+  Future<void> applyConstraints([Map<String, dynamic>? constraints]) {
     throw UnimplementedError();
   }
 
@@ -168,7 +169,7 @@ abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
   }
 
   @deprecated
-  Future<void> adaptRes(int width, int height, {int frameRate}) {
+  Future<void> adaptRes(int width, int height, {int? frameRate}) {
     throw UnimplementedError();
   }
 
@@ -184,11 +185,11 @@ abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
     throw UnimplementedError();
   }
 
-  Future<dynamic> captureFrame([String filePath]) {
+  Future<dynamic> captureFrame() {
     throw UnimplementedError();
   }
 
-  Future<bool> hasTorch() {
+  Future<bool?> hasTorch() {
     throw UnimplementedError();
   }
 
@@ -196,7 +197,7 @@ abstract class MediaStreamTrack extends ValueNotifier<MediaStreamTrackValue> {
     throw UnimplementedError();
   }
 
-  Future<bool> restartCamera();
+  Future<bool?> restartCamera();
 
   @override
   bool operator ==(other) =>

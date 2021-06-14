@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../interface/media_stream_track.dart';
 import 'utils.dart';
@@ -32,7 +34,7 @@ class MediaStreamTrackNative extends MediaStreamTrack {
   final MethodChannel _channel = WebRTC.methodChannel();
   bool _isReleased = false;
 
-  bool _muted = false;
+  final bool _muted = false;
 
   @override
   set enabled(bool enabled) {
@@ -64,7 +66,7 @@ class MediaStreamTrackNative extends MediaStreamTrack {
   }
 
   @override
-  Future<bool> restartCamera() => _channel.invokeMethod(
+  Future<bool?> restartCamera() => _channel.invokeMethod(
         'mediaStreamTrackRestartCamera',
         <String, dynamic>{'trackId': value.id},
       );
@@ -73,7 +75,7 @@ class MediaStreamTrackNative extends MediaStreamTrack {
   bool get muted => _muted;
 
   @override
-  Future<bool> hasTorch() => _channel.invokeMethod(
+  Future<bool?> hasTorch() => _channel.invokeMethod<bool>(
         'mediaStreamTrackHasTorch',
         <String, dynamic>{'trackId': value.id},
       );
@@ -133,7 +135,7 @@ class MediaStreamTrackNative extends MediaStreamTrack {
   }
 
   @override
-  Future<void> adaptRes(int width, int height, {int frameRate}) async {
+  Future<void> adaptRes(int width, int height, {int? frameRate}) async {
     if (_isReleased) {
       return;
     }
@@ -172,15 +174,19 @@ class MediaStreamTrackNative extends MediaStreamTrack {
   }
 
   @override
-  Future<dynamic> captureFrame([String filePath]) {
-    return _channel.invokeMethod<void>(
+  Future<dynamic> captureFrame([String? filePath]) async {
+    var filePath = await getTemporaryDirectory();
+    await _channel.invokeMethod<void>(
       'captureFrame',
       <String, dynamic>{'trackId': value.id, 'path': filePath},
     );
+    return File(filePath.path + '/captureFrame.png')
+        .readAsBytes()
+        .then((value) => value.buffer);
   }
 
   @override
-  Future<void> applyConstraints([Map<String, dynamic> constraints]) {
+  Future<void> applyConstraints([Map<String, dynamic>? constraints]) {
     if (constraints == null) return Future.value();
 
     var _current = getConstraints();
@@ -213,12 +219,12 @@ class MediaStreamTrackNative extends MediaStreamTrack {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': value?.id,
-      'label': value?.label,
-      'kind': value?.kind,
-      'enabled': value?.enabled,
-      'remote': value?.remote,
-      'switched': value?.switched,
+      'id': value.id,
+      'label': value.label,
+      'kind': value.kind,
+      'enabled': value.enabled,
+      'remote': value.remote,
+      'switched': value.switched,
     };
   }
 

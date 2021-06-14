@@ -22,9 +22,9 @@ class MultiPartyRecorderMetaData {
     this.thumbnailData,
     this.videoWidth,
     this.videoHeight,
-    this.duration,
-    this.mimeType,
-    this.frameRate,
+    required this.duration,
+    required this.mimeType,
+    required this.frameRate,
     this.isAudioOnly,
   });
 
@@ -43,28 +43,28 @@ class MultiPartyRecorderMetaData {
     );
   }
 
-  int thumbnailWidth;
-  int thumbnailHeight;
-  int videoWidth;
-  int videoHeight;
-  double duration;
-  Uint8List thumbnailData;
-  String mimeType;
-  double frameRate;
-  bool isAudioOnly;
+  int? thumbnailWidth;
+  int? thumbnailHeight;
+  int? videoWidth;
+  int? videoHeight;
+  double? duration;
+  Uint8List? thumbnailData;
+  String? mimeType;
+  double? frameRate;
+  bool? isAudioOnly;
   String url;
 
   MultiPartyRecorderMetaData copyWith(
-      {int thumbnailWidth,
-      int thumbnailHeight,
-      int videoWidth,
-      int videoHeight,
-      int duration,
-      Uint8List thumbnailData,
-      String mimeType,
-      double frameRate,
-      bool isAudioOnly,
-      String url}) {
+      {int? thumbnailWidth,
+      int? thumbnailHeight,
+      int? videoWidth,
+      int? videoHeight,
+      double? duration,
+      Uint8List? thumbnailData,
+      String? mimeType,
+      double? frameRate,
+      bool? isAudioOnly,
+      String? url}) {
     return MultiPartyRecorderMetaData(
       url ?? this.url,
       thumbnailWidth: thumbnailWidth ?? this.thumbnailWidth,
@@ -112,10 +112,10 @@ class MultiPartyRecorderMetaData {
 
 class MetaDataOptions {
   const MetaDataOptions(
-      {this.thumbnailWidth,
-      this.thumbnailHeight,
-      this.thumbnailQuality,
-      this.isAudioOnly});
+      {required this.thumbnailWidth,
+      required this.thumbnailHeight,
+      required this.thumbnailQuality,
+      this.isAudioOnly = false});
 
   factory MetaDataOptions.fromMap(Map<String, dynamic> map) {
     return MetaDataOptions(
@@ -128,13 +128,13 @@ class MetaDataOptions {
   final int thumbnailWidth;
   final int thumbnailHeight;
   final double thumbnailQuality;
-  final bool isAudioOnly;
+  final bool? isAudioOnly;
 
   MetaDataOptions copyWith({
-    int thumbnailWidth,
-    int thumbnailHeight,
-    double thumbailQuality,
-    bool isAudioOnly,
+    int? thumbnailWidth,
+    int? thumbnailHeight,
+    double? thumbailQuality,
+    bool? isAudioOnly,
   }) {
     return MetaDataOptions(
       thumbnailWidth: thumbnailWidth ?? this.thumbnailWidth,
@@ -165,10 +165,10 @@ class MetaDataOptions {
 
 /// This is thrown when the plugin reports an error.
 class RecorderException implements Exception {
-  RecorderException(this.code, this.description);
+  RecorderException(this.code, {this.description});
 
   String code;
-  String description;
+  String? description;
 
   @override
   String toString() => '$runtimeType($code, $description)';
@@ -177,12 +177,12 @@ class RecorderException implements Exception {
 /// The state of a [MultiPartyRecorder].
 class RecorderValue {
   const RecorderValue({
-    this.isInitialized,
-    this.isPaused,
+    this.isInitialized = false,
+    this.isPaused = false,
     this.errorDescription,
-    this.isRecordingVideo,
-    this.videoSize,
-    this.fps,
+    this.isRecordingVideo = false,
+    this.videoSize = Size.zero,
+    this.fps = 24,
   });
 
   const RecorderValue.uninitialized()
@@ -197,25 +197,25 @@ class RecorderValue {
   /// True when the camera is recording (not the same as previewing).
   final bool isRecordingVideo;
 
-  final String errorDescription;
+  final String? errorDescription;
 
   /// The size of the preview in pixels.
   ///
   /// Is `null` until  [isInitialized] is `true`.
-  final Size videoSize;
+  final Size? videoSize;
 
   final int fps;
 
   bool get hasError => errorDescription != null;
 
   RecorderValue copyWith({
-    bool isInitialized,
-    bool isRecordingVideo,
-    bool isConnected,
-    bool isPaused,
-    String errorDescription,
-    Size videoSize,
-    int fps,
+    bool? isInitialized,
+    bool? isRecordingVideo,
+    bool? isConnected,
+    bool? isPaused,
+    String? errorDescription,
+    Size? videoSize,
+    int? fps,
   }) {
     return RecorderValue(
         isInitialized: isInitialized ?? this.isInitialized,
@@ -251,17 +251,13 @@ abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
     this.format = MediaFormat.mpeg4,
     this.type = MultiPartyRecorderType.local,
     this.videoSize,
-  })  : assert(type != null),
-        assert(fps != null),
-        assert(audioOnly != null),
-        assert(audioOnly ? videoSize == null : videoSize != null),
-        assert(format != null),
-        super(const RecorderValue.uninitialized());
-  final MultiPartyRecorderType type;
-  final MediaFormat format;
-  final Size videoSize;
-  final int fps;
-  final bool audioOnly;
+  }) : super(const RecorderValue.uninitialized());
+  final MultiPartyRecorderType? type;
+  final MediaFormat? format;
+  final Size? videoSize;
+  final int? fps;
+  final bool? audioOnly;
+
   static String stringFromMultiPartyRecorderType(MultiPartyRecorderType type) {
     switch (type) {
       case MultiPartyRecorderType.local:
@@ -269,7 +265,6 @@ abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
       case MultiPartyRecorderType.mixed:
         return 'mixed';
     }
-    throw ArgumentError('Unknown ConnectionType value');
   }
 
   static String stringFromMediaFormat(MediaFormat mediaFormat) {
@@ -279,7 +274,6 @@ abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
       case MediaFormat.webm:
         return 'webm';
     }
-    throw ArgumentError('Unknown ConnectionType value');
   }
 
   Future<void> addTrack(MediaStreamTrack track);
@@ -293,6 +287,7 @@ abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
   Future<void> startWeb(
     MediaStream stream, {
     Function(dynamic blob, bool isLastOne) onDataChunk,
+    String? mimeType,
   });
 
   /// Stop recording.

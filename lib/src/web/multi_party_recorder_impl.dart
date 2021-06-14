@@ -1,10 +1,9 @@
 import 'dart:async';
 import 'dart:html' as html;
 import 'dart:js' as js;
-import 'dart:web_audio';
 import 'dart:js_util' as jsutil;
 import 'dart:math';
-import 'package:platform_detect/platform_detect.dart';
+import 'dart:web_audio';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:flutter_webrtc/src/web/media_stream_track_impl.dart';
@@ -13,32 +12,48 @@ import '../interface/multi_party_recorder.dart';
 
 class VideoMixerSource {
   VideoMixerSource._(this.trackId, this.context2d,
-      {this.rectangle = Rect.zero, this.mirror = false})
-      : assert(rectangle != null);
+      {this.rectangle = Rect.zero, this.mirror = false});
 
-  html.OffscreenCanvas _bitmapCanvas;
+  //html.OffscreenCanvas? _bitmapCanvas;
   final html.OffscreenCanvasRenderingContext2D context2d;
   final String trackId;
   final bool mirror;
   Rect rectangle;
 
   Future<void> draw(html.ImageBitmap bitmap) async {
-    // _bitmapCanvas ??= html.OffscreenCanvas(bitmap.width, bitmap.height);
+    if (context2d.canvas == null) {
+      return;
+    }
+//     const fitImageToCanvas = (image,canvas) => {
+//   const canvasContext = canvas.getContext("2d");
+//   const ratio = image.width / image.height;
+//   let newWidth = canvas.width;
+//   let newHeight = newWidth / ratio;
+//   if (newHeight < canvas.height) {
+//     newHeight = canvas.height;
+//     newWidth = newHeight * ratio;
+//   }
+//   const xOffset = newWidth > canvas.width ? (canvas.width - newWidth) / 2 : 0;
+//   const yOffset =
+//     newHeight > canvas.height ? (canvas.height - newHeight) / 2 : 0;
+//   canvasContext.drawImage(image, xOffset, yOffset, newWidth, newHeight);
+// };
+    //_bitmapCanvas ??= html.OffscreenCanvas(bitmap.width!, bitmap.height!);
     // final renderer = _bitmapCanvas.getContext('bitmaprenderer')
     //     as html.ImageBitmapRenderingContext;
     // _bitmapCanvas.width = bitmap.width;
     // _bitmapCanvas.height = bitmap.height;
     // renderer.transferFromImageBitmap(bitmap);
-    var hRatio = context2d.canvas.width / context2d.canvas.width;
-    var vRatio = context2d.canvas.height / context2d.canvas.height;
+    var hRatio = context2d.canvas!.width! / bitmap.width!;
+    var vRatio = context2d.canvas!.height! / bitmap.height!;
     var ratio = max(hRatio, vRatio);
-    var centerShift_x = rectangle.left +
-        (_bitmapCanvas.width - _bitmapCanvas.width * ratio) / 2;
-    var centerShift_y = rectangle.top +
-        (_bitmapCanvas.height - _bitmapCanvas.height * ratio) / 2;
+    var centerShift_x =
+        rectangle.left + (bitmap.width! - bitmap.width! * ratio) / 2;
+    var centerShift_y =
+        rectangle.top + (bitmap.height! - bitmap.height! * ratio) / 2;
     //context2d.clearRect(0, 0, rectangle.width, rectangle.height);
-  
-    context2d.drawImage(bitmap, 0, 0, _bitmapCanvas.width, _bitmapCanvas.height,
+
+    context2d.drawImage(bitmap, 0, 0, bitmap.width, bitmap.height,
         centerShift_x, centerShift_y, rectangle.width, rectangle.height);
   }
 }
@@ -50,26 +65,21 @@ class VideoMixer {
   final html.OffscreenCanvas canvas;
 
   void addSource(String trackId) {
-    final video = videoSources.firstWhere(
-        (element) => trackId == element.trackId,
-        orElse: () => null);
-    if (video != null) {
-      return;
-    }
+    if (videoSources.contains((element) => trackId == element.trackId)) return;
     videoSources.add(VideoMixerSource._(
       trackId,
-      canvas.getContext('2d'),
+      canvas.getContext('2d') as html.OffscreenCanvasRenderingContext2D,
     ));
     updateLayout();
   }
 
   void removeSource(String trackId) {
+    if (!videoSources.contains((element) => trackId == element.trackId)) return;
+
     final videoSource = videoSources.firstWhere(
-        (element) => trackId == element.trackId,
-        orElse: () => null);
-    if (videoSource != null) {
-      videoSources.remove(videoSource);
-    }
+      (element) => trackId == element.trackId,
+    );
+    videoSources.remove(videoSource);
     updateLayout();
     //_videoTrackObservers[track.id] = VideoTrackObserver(this, track);
   }
@@ -77,14 +87,14 @@ class VideoMixer {
   void updateLayout() {
     if (videoSources.length == 1) {
       videoSources[0].rectangle = Rect.fromLTWH(
-          0, 0, canvas.width.toDouble(), canvas.height.toDouble());
+          0, 0, canvas.width!.toDouble(), canvas.height!.toDouble());
     } else {
-      var width = (canvas.width / videoSources.length).toDouble();
+      var width = (canvas.width! / videoSources.length).toDouble();
       var xPos = 0.0;
       var yPos = 0.0;
       videoSources.forEach((element) {
         element.rectangle =
-            Rect.fromLTWH(xPos, yPos, width, canvas.height.toDouble());
+            Rect.fromLTWH(xPos, yPos, width, canvas.height!.toDouble());
         xPos += width;
       });
     }
@@ -92,11 +102,8 @@ class VideoMixer {
 
   void drawFrame(String trackId, html.ImageBitmap frame) {
     final video = videoSources.firstWhere(
-        (element) => trackId == element.trackId,
-        orElse: () => null);
-    if (video == null) {
-      return;
-    }
+      (element) => trackId == element.trackId,
+    );
     video.draw(frame);
   }
 
@@ -128,11 +135,11 @@ class _VideoSourceDescription {
 
 class MultiPartyRecorderWeb extends MultiPartyRecorder {
   MultiPartyRecorderWeb({
-    int fps,
-    bool audioOnly,
-    MediaFormat format,
-    Size videoSize,
-    MultiPartyRecorderType type,
+    int? fps,
+    bool? audioOnly,
+    MediaFormat? format,
+    Size? videoSize,
+    MultiPartyRecorderType? type,
   }) : super(
             fps: fps,
             audioOnly: audioOnly,
@@ -146,26 +153,26 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
   bool _isReleased = false;
   List<_VideoSourceDescription> videoSources = [];
   List<_AudioSourceDescription> audioSources = [];
-  html.MediaRecorder _recorder;
-  Completer<String> _completer;
-  AudioContext _audioContext;
-  VideoMixer _videoMixer;
-  html.CanvasElement _canvas;
-  MediaStreamAudioDestinationNode _audioDestinationNode;
-  GainNode _gainNode;
+  html.MediaRecorder? _recorder;
+  Completer<String>? _completer;
+  late AudioContext _audioContext;
+  VideoMixer? _videoMixer;
+  html.CanvasElement? _canvas;
+  late MediaStreamAudioDestinationNode _audioDestinationNode;
+  late GainNode _gainNode;
 
   Future<void> _initialize() async {
     if (videoSize != null) {
-      _canvas = html.Element.canvas();
-      _canvas.width = videoSize.width.toInt();
-      _canvas.height = videoSize.height.toInt();
-      _videoMixer = VideoMixer(_canvas.transferControlToOffscreen());
+      _canvas = html.Element.canvas() as html.CanvasElement;
+      _canvas!.width = videoSize!.width.toInt();
+      _canvas!.height = videoSize!.height.toInt();
+      _videoMixer = VideoMixer(_canvas!.transferControlToOffscreen());
     }
     _audioContext = AudioContext();
     _audioDestinationNode = _audioContext.createMediaStreamDestination();
     _gainNode = _audioContext.createGain();
-    _gainNode.connectNode(_audioContext.destination);
-    _gainNode.gain.value = 0; // don't hear self
+    _gainNode.connectNode(_audioContext.destination!);
+    _gainNode.gain?.value = 0; // don't hear self
     value = value.copyWith(isInitialized: true);
   }
 
@@ -175,26 +182,19 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
       return;
     }
     if (track.kind == 'video') {
-      final video = videoSources.firstWhere(
-          (element) => element.track.id == track.id,
-          orElse: () => null);
-      if (video != null) {
+      if (videoSources.contains((element) => element.track.id == track.id)) {
         return;
       }
-      videoSources.add(_VideoSourceDescription._(track));
-      _videoMixer?.addSource(track.id);
+      videoSources.add(_VideoSourceDescription._(track as MediaStreamTrackWeb));
+      _videoMixer?.addSource(track.id!);
     } else if (track.kind == 'audio') {
-      final audioSource = audioSources.firstWhere(
-          (element) => element.track.id == track.id,
-          orElse: () => null);
-      if (audioSource != null) {
+      if (audioSources.contains((element) => element.track.id == track.id)) {
         return;
       }
       final audioSourceDesc = _AudioSourceDescription._(
-        track,
-              jsutil.callMethod(
-          _audioContext, 'createMediaStreamTrackSource', [(track as MediaStreamTrackWeb).jsTrack])
-      );
+          track as MediaStreamTrackWeb,
+          jsutil.callMethod(
+              _audioContext, 'createMediaStreamTrackSource', [track.jsTrack]));
       audioSources.add(
         audioSourceDesc,
       );
@@ -209,21 +209,23 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
       return;
     }
     if (track.kind == 'video') {
+      if (!videoSources.contains((element) => element.track.id == track.id)) {
+        return;
+      }
       final videoSource = videoSources.firstWhere(
-          (element) => element.track.id == track.id,
-          orElse: () => null);
-      if (videoSource != null) {
-        videoSources.remove(videoSource);
-      }
-      _videoMixer?.removeSource(track.id);
+        (element) => element.track.id == track.id,
+      );
+      videoSources.remove(videoSource);
+      _videoMixer?.removeSource(track.id!);
     } else if (track.kind == 'audio') {
-      final audioSource = audioSources.firstWhere(
-          (element) => element.track.id == track.id,
-          orElse: () => null);
-      if (audioSource != null) {
-        audioSources.remove(audioSource);
-        _audioDestinationNode.disconnect(audioSource);
+      if (!audioSources.contains((element) => element.track.id == track.id)) {
+        return;
       }
+      final audioSource = audioSources.firstWhere(
+        (element) => element.track.id == track.id,
+      );
+      audioSources.remove(audioSource);
+      _audioDestinationNode.disconnect(audioSource);
     }
     //_videoTrackObservers[track.id] = VideoTrackObserver(this, track);
   }
@@ -235,7 +237,7 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
     // canvas.context2D.drawImageScaled(source, destX, destY, destWidth, destHeight)
     final futures = videoSources.map((desc) async {
       final frame = await desc.grabFrame();
-      _videoMixer.drawFrame(desc.track.id, frame);
+      _videoMixer?.drawFrame(desc.track.id!, frame);
     });
     await Future.wait(futures);
     html.window.requestAnimationFrame(draw);
@@ -268,59 +270,55 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
   @override
   Future<void> startWeb(
     MediaStream stream, {
-    Function(dynamic blob, bool isLastOne) onDataChunk,
+    Function(dynamic blob, bool isLastOne)? onDataChunk,
+    String? mimeType = 'video/webm',
   }) async {
     if (!value.isInitialized || _isReleased) {
       throw RecorderException(
         'Uninitialized MultiPartyRecorder',
-        'startVideoRecording was called on uninitialized MultiPartyRecorder',
+        description:
+            'startVideoRecording was called on uninitialized MultiPartyRecorder',
       );
     }
     if (value.isRecordingVideo) {
       throw RecorderException(
         'A video recording is already started.',
-        'startVideoRecording was called when a recording is already started.',
+        description:
+            'startVideoRecording was called when a recording is already started.',
       );
     }
     value = value.copyWith(isRecordingVideo: true);
 
-    _recorder = html.MediaRecorder(getMixedStream(), {'mimeType': mediaFormat});
+    _recorder = html.MediaRecorder(getMixedStream(), {'mimeType': mimeType});
     if (onDataChunk == null) {
       var _chunks = <html.Blob>[];
       _completer = Completer<String>();
-      _recorder.addEventListener('dataavailable', (html.Event event) {
+      _recorder?.addEventListener('dataavailable', (html.Event event) {
         final html.Blob blob = js.JsObject.fromBrowserObject(event)['data'];
         if (blob.size > 0) {
           _chunks.add(blob);
         }
-        if (_recorder.state == 'inactive') {
-          final blob = html.Blob(_chunks, mediaFormat);
+        if (_recorder!.state == 'inactive') {
+          final blob = html.Blob(_chunks, mimeType);
           _completer?.complete(html.Url.createObjectUrlFromBlob(blob));
           _completer = null;
         }
       });
-      _recorder.onError.listen((error) {
+      _recorder!.onError.listen((error) {
         _completer?.completeError(error);
         _completer = null;
         value = value.copyWith(isRecordingVideo: false);
       });
     } else {
-      _recorder.addEventListener('dataavailable', (html.Event event) {
+      _recorder!.addEventListener('dataavailable', (html.Event event) {
         onDataChunk(
           js.JsObject.fromBrowserObject(event)['data'],
-          _recorder.state == 'inactive',
+          _recorder!.state == 'inactive',
         );
       });
     }
-    _recorder.start();
+    _recorder!.start();
     html.window.requestAnimationFrame(draw);
-  }
-
-  String get mediaFormat {
-    if (browser.isSafari) {
-      return 'video/mpeg4';
-    }
-    return 'video/webm';
   }
 
   /// Stop recording.
@@ -330,13 +328,15 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
     if (!value.isInitialized || _isReleased) {
       throw RecorderException(
         'Uninitialized MultiPartyRecorder',
-        'stopVideoRecording was called on uninitialized MultiPartyRecorder',
+        description:
+            'stopVideoRecording was called on uninitialized MultiPartyRecorder',
       );
     }
     if (!value.isRecordingVideo) {
       throw RecorderException(
         'No video is recording',
-        'stopVideoRecording was called when no video is recording.',
+        description:
+            'stopVideoRecording was called when no video is recording.',
       );
     }
     value = value.copyWith(isRecordingVideo: false);
@@ -371,15 +371,13 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
     _recorder?.stop();
     _recorder = null;
 
-    _gainNode?.disconnect();
-    audioSources?.forEach((source) {
+    _gainNode.disconnect();
+    audioSources.forEach((source) {
       source.sourceNode.disconnect();
     });
     audioSources = [];
-    _audioDestinationNode?.disconnect();
-    _audioDestinationNode = null;
-    _audioContext?.close();
-    _audioContext = null;
+    _audioDestinationNode.disconnect();
+    _audioContext.close();
     _videoMixer?.release();
     _videoMixer = null;
     value = RecorderValue.uninitialized();

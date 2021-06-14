@@ -311,7 +311,7 @@ public class FlutterRTCVideoRenderer implements EventChannel.StreamHandler, GetU
             surfaceTextureRenderer.setBlur(this.mute);
         }
     }
-    
+
     public void blur(boolean blur, final MethodChannel.Result result) {
         if (surfaceTextureRenderer != null) {
             surfaceTextureRenderer.setBlur(blur);

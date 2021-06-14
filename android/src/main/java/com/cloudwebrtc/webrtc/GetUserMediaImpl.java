@@ -474,45 +474,45 @@ public class GetUserMediaImpl {
                             return;
                         }
 
-                            ConstraintsMap videoConstraintsMap = null;
-                            ConstraintsMap videoConstraintsMandatory = null;
+                        ConstraintsMap videoConstraintsMap = null;
+                        ConstraintsMap videoConstraintsMandatory = null;
 
-                            if (constraints.getType("video") == ObjectType.Map) {
-                                videoConstraintsMap = constraints.getMap("video");
-                                if (videoConstraintsMap.hasKey("mandatory")
-                                        && videoConstraintsMap.getType("mandatory")
-                                        == ObjectType.Map) {
-                                    videoConstraintsMandatory
-                                            = videoConstraintsMap.getMap("mandatory");
-                                }
+                        if (constraints.getType("video") == ObjectType.Map) {
+                            videoConstraintsMap = constraints.getMap("video");
+                            if (videoConstraintsMap.hasKey("mandatory")
+                                    && videoConstraintsMap.getType("mandatory")
+                                    == ObjectType.Map) {
+                                videoConstraintsMandatory
+                                        = videoConstraintsMap.getMap("mandatory");
                             }
+                        }
 
 
                         PeerConnectionFactory pcFactory = stateProvider.getPeerConnectionFactory();
                         VideoSource videoSource = pcFactory.createVideoSource(true);
 
-                            Context context = stateProvider.getActivity();
-                            String threadName = Thread.currentThread().getName();
-                            SurfaceTextureHelper surfaceTextureHelper = SurfaceTextureHelper.create(threadName, EglUtils.getRootEglBaseContext());
-                            videoCapturer.initialize(surfaceTextureHelper, context, videoSource.getCapturerObserver());
+                        Context context = stateProvider.getActivity();
+                        String threadName = Thread.currentThread().getName();
+                        SurfaceTextureHelper surfaceTextureHelper = SurfaceTextureHelper.create(threadName, EglUtils.getRootEglBaseContext());
+                        videoCapturer.initialize(surfaceTextureHelper, context, videoSource.getCapturerObserver());
 
-                            WindowManager wm = (WindowManager) applicationContext
-                                    .getSystemService(Context.WINDOW_SERVICE);
+                        WindowManager wm = (WindowManager) applicationContext
+                                .getSystemService(Context.WINDOW_SERVICE);
 
 
-                            // Fall back to defaults if keys are missing.
-                            int width
-                                    = videoConstraintsMandatory.hasKey("minWidth")
-                                    ? videoConstraintsMandatory.getInt("minWidth")
-                                    : wm.getDefaultDisplay().getWidth();
-                            int height
-                                    = videoConstraintsMandatory.hasKey("minHeight")
-                                    ? videoConstraintsMandatory.getInt("minHeight")
-                                    : wm.getDefaultDisplay().getHeight();
-                            int fps
-                                    = videoConstraintsMandatory.hasKey("minFrameRate")
-                                    ? videoConstraintsMandatory.getInt("minFrameRate")
-                                    : DEFAULT_FPS;
+                        // Fall back to defaults if keys are missing.
+                        int width
+                                = videoConstraintsMandatory.hasKey("minWidth")
+                                ? videoConstraintsMandatory.getInt("minWidth")
+                                : wm.getDefaultDisplay().getWidth();
+                        int height
+                                = videoConstraintsMandatory.hasKey("minHeight")
+                                ? videoConstraintsMandatory.getInt("minHeight")
+                                : wm.getDefaultDisplay().getHeight();
+                        int fps
+                                = videoConstraintsMandatory.hasKey("minFrameRate")
+                                ? videoConstraintsMandatory.getInt("minFrameRate")
+                                : DEFAULT_FPS;
                         videoCapturer.startCapture(width, height, fps);
                         Log.d(TAG, "ScreenCapturerAndroid.startCapture: " + width + "x" + height + "@" + fps);
 

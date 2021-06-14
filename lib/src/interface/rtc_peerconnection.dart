@@ -37,29 +37,29 @@ abstract class RTCPeerConnection {
   RTCPeerConnection();
 
   // public: delegate
-  SignalingStateCallback onSignalingState;
-  PeerConnectionStateCallback onConnectionState;
-  IceGatheringStateCallback onIceGatheringState;
-  IceConnectionStateCallback onIceConnectionState;
-  IceCandidateCallback onIceCandidate;
-  AddStreamCallback onAddStream;
-  RemoveStreamCallback onRemoveStream;
-  AddTrackCallback onAddTrack;
-  RemoveTrackCallback onRemoveTrack;
-  RTCDataChannelCallback onDataChannel;
-  RenegotiationNeededCallback onRenegotiationNeeded;
-  IceCandidatesRemovedCallback onIceCandidatesRemoved;
+  SignalingStateCallback? onSignalingState;
+  PeerConnectionStateCallback? onConnectionState;
+  IceGatheringStateCallback? onIceGatheringState;
+  IceConnectionStateCallback? onIceConnectionState;
+  IceCandidateCallback? onIceCandidate;
+  AddStreamCallback? onAddStream;
+  RemoveStreamCallback? onRemoveStream;
+  AddTrackCallback? onAddTrack;
+  RemoveTrackCallback? onRemoveTrack;
+  RTCDataChannelCallback? onDataChannel;
+  RenegotiationNeededCallback? onRenegotiationNeeded;
+  IceCandidatesRemovedCallback? onIceCandidatesRemoved;
 
   /// Unified-Plan
-  UnifiedPlanTrackCallback onTrack;
+  UnifiedPlanTrackCallback? onTrack;
 
-  RTCSignalingState get signalingState;
+  RTCSignalingState? get signalingState;
 
-  RTCIceGatheringState get iceGatheringState;
+  RTCIceGatheringState? get iceGatheringState;
 
-  RTCIceConnectionState get iceConnectionState;
+  RTCIceConnectionState? get iceConnectionState;
 
-  RTCPeerConnectionState get connectionState;
+  RTCPeerConnectionState? get connectionState;
 
   Future<void> dispose();
 
@@ -76,21 +76,23 @@ abstract class RTCPeerConnection {
 
   Future<void> removeStream(MediaStream stream);
 
-  Future<RTCSessionDescription> getLocalDescription();
+  Future<RTCSessionDescription?> getLocalDescription();
+
   Future<void> setLocalDescription(RTCSessionDescription description);
 
-  Future<RTCSessionDescription> getRemoteDescription();
+  Future<RTCSessionDescription?> getRemoteDescription();
+
   Future<void> setRemoteDescription(RTCSessionDescription description);
 
   Future<void> addCandidate(RTCIceCandidate candidate);
 
   Future<void> removeIceCandidates(List<RTCIceCandidate> candidates);
 
-  Future<RTCStatsReport> getStats([MediaStreamTrack track]);
+  Future<RTCStatsReport?> getStats([MediaStreamTrack? track]);
 
-  List<MediaStream> getLocalStreams();
+  List<MediaStream?> getLocalStreams();
 
-  List<MediaStream> getRemoteStreams();
+  List<MediaStream?> getRemoteStreams();
 
   Future<RTCDataChannel> createDataChannel(
       String label, RTCDataChannelInit dataChannelDict);
