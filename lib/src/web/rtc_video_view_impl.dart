@@ -67,7 +67,6 @@ class _RTCVideoViewState extends State<RTCVideoView> {
         widget.objectFit == RTCVideoViewObjectFit.RTCVideoViewObjectFitContain
             ? 'contain'
             : 'cover';
-    print('object FIT: ${widget.objectFit}');
     return HtmlElementView(
         viewType: 'RTCVideoRenderer-${videoRenderer.textureId}');
   }

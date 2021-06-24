@@ -98,7 +98,9 @@ class RTCVideoRendererWeb extends VideoRenderer {
       ..controls = false
       ..style.objectFit = 'contain'
       ..style.transform = 'rotateY(180deg)'
-      ..style.border = 'none';
+      ..style.border = 'none'
+      ..style.height = '100%'
+      ..style.width = '100%';
     _lifeCycleObserver?.dispose();
     _lifeCycleObserver = RTCVideoAppLifeCycleObserver(this);
     _lifeCycleObserver?.initialize();
