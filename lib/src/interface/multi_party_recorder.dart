@@ -294,4 +294,7 @@ abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
   Future<void> stop();
 
   Future<void> release();
+
+  @override
+  Future<void> dispose();
 }
