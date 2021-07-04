@@ -174,8 +174,7 @@ class MultiPartyRecorderNative extends MultiPartyRecorder {
   }
 
   @override
-  Future<void> startWeb(
-    MediaStream stream, {
+  Future<void> startWeb({
     Function(dynamic blob, bool isLastOne)? onDataChunk,
     String? mimeType,
   }) async {}

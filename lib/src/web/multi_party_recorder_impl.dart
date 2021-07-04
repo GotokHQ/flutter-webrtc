@@ -269,8 +269,7 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
   Future<void> start(String filePath) async {}
 
   @override
-  Future<void> startWeb(
-    MediaStream stream, {
+  Future<void> startWeb({
     Function(dynamic blob, bool isLastOne)? onDataChunk,
     String? mimeType = 'video/webm',
   }) async {

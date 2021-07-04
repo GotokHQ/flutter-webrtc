@@ -284,8 +284,7 @@ abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
 
   Future<void> start(String filePath);
 
-  Future<void> startWeb(
-    MediaStream stream, {
+  Future<void> startWeb({
     Function(dynamic blob, bool isLastOne)? onDataChunk,
     String? mimeType,
   });
