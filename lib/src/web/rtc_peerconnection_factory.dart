@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import '../interface/media_recorder.dart';
 import '../interface/media_stream.dart';
@@ -28,7 +29,7 @@ MultiPartyRecorder multiPartyRecorder({
   bool audioOnly = false,
   MediaFormat format = MediaFormat.mpeg4,
   MultiPartyRecorderType type = MultiPartyRecorderType.local,
-  videoSize,
+  Size? videoSize,
 }) {
   return RTCFactoryWeb.instance.multiPartyRecorder(
       fps: fps,
