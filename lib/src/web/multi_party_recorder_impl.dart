@@ -325,7 +325,13 @@ class MultiPartyRecorderWeb extends MultiPartyRecorder {
   /// Stop recording.
 
   @override
-  Future<void> stop() async {
+  Future<MultiPartyRecorderMetaData?> stop(
+      {returnMetaData = false,
+      metaDataOptions = const MetaDataOptions(
+          isAudioOnly: false,
+          thumbnailHeight: 200,
+          thumbnailWidth: 200,
+          thumbnailQuality: 0.7)}) async {
     if (!value.isInitialized || _isReleased) {
       throw RecorderException(
         'Uninitialized MultiPartyRecorder',

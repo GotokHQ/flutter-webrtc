@@ -291,7 +291,13 @@ abstract class MultiPartyRecorder extends ValueNotifier<RecorderValue> {
   });
 
   /// Stop recording.
-  Future<void> stop();
+  Future<MultiPartyRecorderMetaData?> stop(
+      {returnMetaData = false,
+      metaDataOptions = const MetaDataOptions(
+          isAudioOnly: false,
+          thumbnailHeight: 200,
+          thumbnailWidth: 200,
+          thumbnailQuality: 0.7)});
 
   Future<void> release();
 
