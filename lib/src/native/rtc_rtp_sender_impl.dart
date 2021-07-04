@@ -85,12 +85,12 @@ class RTCRtpSenderNative extends RTCRtpSender {
   }
 
   @override
-  Future<void> replaceTrack(MediaStreamTrack track) async {
+  Future<void> replaceTrack({MediaStreamTrack? track}) async {
     try {
       await _channel.invokeMethod('rtpSenderReplaceTrack', <String, dynamic>{
         'peerConnectionId': _peerConnectionId,
         'rtpSenderId': _id,
-        'trackId': track.id
+        'trackId': track?.id
       });
     } on PlatformException catch (e) {
       throw 'Unable to RTCRtpSender::replaceTrack: ${e.message}';
