@@ -53,5 +53,11 @@ class MultiPartyRecorder extends _interface.MultiPartyRecorder {
   Future<void> stop() => _delegate.stop();
 
   @override
+  void dispose() {
+    _delegate.dispose();
+    super.dispose();
+  }
+
+  @override
   Future<void> release() => _delegate.release();
 }
