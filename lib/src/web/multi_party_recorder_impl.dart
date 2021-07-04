@@ -5,9 +5,10 @@ import 'dart:js_util' as jsutil;
 import 'dart:math';
 import 'dart:web_audio';
 import 'package:flutter/material.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:flutter_webrtc/src/web/media_stream_track_impl.dart';
 
+import '../interface/media_stream.dart';
+import '../interface/media_stream_track.dart';
 import '../interface/multi_party_recorder.dart';
 
 class VideoMixerSource {
