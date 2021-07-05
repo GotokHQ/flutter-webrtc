@@ -35,6 +35,7 @@ class MultiPartyRecorderNative extends MultiPartyRecorder {
   final Map<String, VideoTrackObserver> _videoTrackObservers =
       <String, VideoTrackObserver>{};
   late String _filePath;
+
   Future<void> _initialize() async {
     if (_isReleased) {
       return Future<void>.value();

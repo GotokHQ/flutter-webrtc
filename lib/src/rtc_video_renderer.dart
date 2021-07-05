@@ -24,6 +24,10 @@ class RTCVideoRenderer {
 
   set muted(bool mute) => _delegate.muted = mute;
 
+  bool get blurred => _delegate.blurred;
+
+  set blurred(bool blur) => _delegate.blurred = blurred;
+
   set audioOutput(String deviceId) => _delegate.audioOutput(deviceId);
 
   set srcObject(MediaStream? stream) => _delegate.srcObject = stream;
@@ -33,7 +37,7 @@ class RTCVideoRenderer {
   Future<void> dispose() async {
     return _delegate.dispose();
   }
-    
+
   Future<void> release() async {
     return _delegate.release();
   }
