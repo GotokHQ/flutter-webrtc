@@ -18,6 +18,7 @@ export 'src/interface/rtc_rtp_transceiver.dart';
 export 'src/interface/rtc_session_description.dart';
 export 'src/interface/rtc_stats_report.dart';
 export 'src/interface/rtc_track_event.dart';
+export 'src/interface/rtc_video_renderer.dart';
 export 'src/media_devices.dart';
 export 'src/media_recorder.dart';
 export 'src/native/rtc_peerconnection_factory.dart'
