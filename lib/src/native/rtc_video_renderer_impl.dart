@@ -69,7 +69,7 @@ class RTCVideoRendererNative extends VideoRenderer {
   }
 
   void _applyStream() {
-    if (!isCreated || _srcObject == null || _isReleased) {
+    if (!isCreated || _isReleased) {
       return;
     }
     if (textureId == null) throw 'Call initialize before setting the stream';
