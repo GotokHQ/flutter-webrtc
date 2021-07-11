@@ -27,7 +27,9 @@ class RTCVideoView extends StatelessWidget {
     return ValueListenableBuilder<RTCVideoValue>(
       valueListenable: videoRenderer,
       builder: (BuildContext context, RTCVideoValue value, Widget? _) {
-        if (!value.initialized) return Container();
+        if (!value.initialized || !value.renderVideo || value.mute) {
+          return Container();
+        }
         return LayoutBuilder(
           builder: (BuildContext context, BoxConstraints constraints) {
             return Center(
