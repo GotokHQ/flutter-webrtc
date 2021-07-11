@@ -429,6 +429,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
       case "trackDispose": {
         String trackId = call.argument("trackId");
         localTracks.remove(trackId);
+        getUserMediaImpl.removeVideoCapturer(trackId);
         result.success(null);
         break;
       }
@@ -1440,6 +1441,7 @@ public class MethodCallHandlerImpl implements MethodCallHandler, StateProvider {
           mediaStream.removeTrack((AudioTrack) track);
         } else if (track.kind().equals("video")) {
           mediaStream.removeTrack((VideoTrack) track);
+          getUserMediaImpl.removeVideoCapturer(trackId);
         }
       } else {
         resultError("mediaStreamRemoveTrack", "mediaStreamAddTrack() track [" + trackId + "] is null", result);
