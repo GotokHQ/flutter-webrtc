@@ -72,8 +72,8 @@ class RTCVideoValue {
   }
 
   @override
-  int get hashCode => hashValues(
-      rotation, firstFrameRendered, isMirrored, errorDescription, size, mute);
+  int get hashCode => hashValues(rotation, firstFrameRendered, isMirrored,
+      errorDescription, size, mute, renderVideo, isBlurred);
 
   @override
   bool operator ==(Object other) =>
