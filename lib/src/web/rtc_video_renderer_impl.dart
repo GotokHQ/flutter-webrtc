@@ -178,6 +178,7 @@ class RTCVideoRendererWeb extends VideoRenderer {
     if (stream == null) {
       _videoElement?.srcObject = null;
       _srcObject = null;
+      value = value.copyWith(renderVideo: renderVideo);
       return;
     }
     _srcObject = stream;
