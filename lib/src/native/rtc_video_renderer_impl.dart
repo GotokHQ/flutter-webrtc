@@ -73,13 +73,15 @@ class RTCVideoRendererNative extends VideoRenderer {
       return;
     }
     if (textureId == null) throw 'Call initialize before setting the stream';
+    print('APPLY STREAM: $_srcObject');
     _channel.invokeMethod('videoRendererSetSrcObject', <String, dynamic>{
       'textureId': textureId,
       'streamId': _srcObject?.id ?? '',
       'ownerTag': _srcObject?.ownerTag ?? ''
     }).then((_) {
+      print('DONE APPLY STREAM: $_srcObject');
       value = (_srcObject == null)
-          ? RTCVideoValue.uninitialized()
+          ? value.copyWith(renderVideo: renderVideo, mute: true)
           : value.copyWith(renderVideo: renderVideo, mute: false);
     });
   }
@@ -107,6 +109,7 @@ class RTCVideoRendererNative extends VideoRenderer {
 
   void eventListener(dynamic event) {
     final Map<dynamic, dynamic> map = event;
+    print('map: $map');
     switch (map['event']) {
       case 'didTextureChangeRotation':
         value = value.copyWith(rotation: map['rotation']);

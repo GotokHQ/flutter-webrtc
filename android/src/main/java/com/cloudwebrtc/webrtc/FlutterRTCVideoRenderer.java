@@ -258,7 +258,7 @@ public class FlutterRTCVideoRenderer implements EventChannel.StreamHandler, GetU
                     // with black.
                     cleanSurfaceViewRenderer();
                 }
-                Log.e(TAG, "Got new VideoTrack!");
+                Log.d(TAG, "Got new VideoTrack!");
             }
         }
     }
@@ -288,7 +288,7 @@ public class FlutterRTCVideoRenderer implements EventChannel.StreamHandler, GetU
             surfaceTextureRenderer.addFrameListener(listener);
         }
         videoTrack.addSink(surfaceTextureRenderer);
-        Log.e(TAG, "Added render a VideoTrack!");
+        Log.d(TAG, "Added render a VideoTrack!");
     }
 
 
